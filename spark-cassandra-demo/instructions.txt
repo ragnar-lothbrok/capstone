@@ -88,3 +88,4 @@ CREATE TABLE daily_transaction (
     orderabove2000 counter
 );
 
+//http://msvaljek.blogspot.in/2015/12/stream-processing-with-spring-kafka_13.html
