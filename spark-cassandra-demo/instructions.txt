@@ -1,0 +1,90 @@
+Start Cassandra Clsuter / Standalone Node
+
+
+CREATE KEYSPACE capstone WITH replication = {'class': 'SimpleStrategy','replication_factor': 1}
+
+
+CREATE TABLE carddetails (
+	cardId bigint PRIMARY KEY,
+	customerId bigint,
+	bank text,
+	type text,
+	nameOnCard text,
+	expiryMonth int,
+	expiryYear int,
+	cardNum text,
+	cardLimit float);
+	
+
+CREATE TABLE customer (
+	customerid bigint PRIMARY KEY,
+	name text,
+	mobilenumber text,
+	gender text,
+	birthdate bigint,
+	email text,
+	address text,
+	state text,
+	country text,
+	pincode text );
+	
+	
+
+CREATE TABLE merchant (
+	merchantid bigint PRIMARY KEY,
+	merchantname text,
+	mobilenumber text,
+	startdate bigint,
+	email text,
+	address text,
+	state text,
+	country text,
+	pincode text,
+	merchanttype int,
+	segment text,
+	taxRegNum text,
+	description text
+	 );
+
+
+CREATE TABLE capstone.transaction (
+    transactionid bigint PRIMARY KEY,
+    customerid bigint,
+    invoiceamount float,
+    invoicenumber text,
+    merchantid bigint,
+    status text,
+    timestamp bigint
+);
+
+
+CREATE TABLE customer_transaction (
+    customerid bigint PRIMARY KEY,
+    ordersuccesscounter counter,
+    ordercancelcounter counter,
+    orderbelow500 counter,
+    orderbelow1000 counter,
+    orderbelow2000 counter,
+    orderabove2000 counter
+);
+
+CREATE TABLE merchant_transaction (
+    merchantid bigint PRIMARY KEY,
+    ordersuccesscounter counter,
+    ordercancelcounter counter,
+    orderbelow500 counter,
+    orderbelow1000 counter,
+    orderbelow2000 counter,
+    orderabove2000 counter
+);
+
+CREATE TABLE daily_transaction (
+    date text PRIMARY KEY,
+    ordersuccesscounter counter,
+    ordercancelcounter counter,
+    orderbelow500 counter,
+    orderbelow1000 counter,
+    orderbelow2000 counter,
+    orderabove2000 counter
+);
+

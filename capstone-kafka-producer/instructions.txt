@@ -1,0 +1,88 @@
+Kafka Version :
+
+kafka_2.11-0.10.1.1
+
+Start Zookeeper :
+bin/zookeeper-server-start.sh config/zookeeper.properties
+
+Start Kafka :
+bin/kafka-server-start.sh config/server.properties
+
+Transaction  Topic Creation :
+
+bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic transaction_topic
+
+Publishing Data from Command Line :
+
+bin/kafka-console-producer.sh --broker-list localhost:9092 --topic product_topic
+
+Consumer Side : 
+bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic transaction_topic --from-beginning
+
+{"txId":20170010000088,"customerId":799,"merchantId":793,"status":"FAILED","timestamp":1327948920000,"invoiceNum":"488-927-937","invoiceAmount":12934.0}
+
+
+
+Customer  Topic Creation :
+
+bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic customer_topic
+
+Publishing Data from Command Line :
+
+bin/kafka-console-producer.sh --broker-list localhost:9092 --topic customer_topic
+
+Consumer Side : 
+bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic customer_topic --from-beginning
+{"customerId":971,"customerName":"Russell Richard","mobileNumber":947642663,"gender":"FEMALE","bithDate":1231094160000,"email":"971_Robert@gmail.com","address":"30088 Indian Peach Glade","state":"nj","country":"br","pincode":993178,"userType":2,"vehicleType":"CAR","firstVisit":1358534220000}
+
+
+Card  Topic Creation :
+
+bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic card_topic
+
+Publishing Data from Command Line :
+
+bin/kafka-console-producer.sh --broker-list localhost:9092 --topic card_topic
+
+Consumer Side : 
+bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic card_topic --from-beginning
+
+{"cardId":943,"customerId":943,"bank":"ICICI Bank","type":"MASTER","nameOnCard":"Mary Martinez","expiryMonth":8,"expiryYear":2021,"cardNum":"4725-9719-6681-2853","cardLimit":110438.0}
+
+
+Merchant  Topic Creation :
+
+bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic merchant_topic
+
+Publishing Data from Command Line :
+
+bin/kafka-console-producer.sh --broker-list localhost:9092 --topic merchant_topic
+
+Consumer Side : 
+bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic merchant_topic --from-beginning
+{"merchantId":985,"merchantName":"Jackeline Rowland LLP","mobileNumber":927598282,"startDate":1359484560000,"email":"985_Stephen@gmail.com","address":"32818 Happy Crow Saunter","state":"fl","country":"br","pincode":238261,"merchantType":1,"segment":"Grocery","taxRegNum":"d9882afe-54e9-4c10-be41-85260f9105be","description":""}
+
+
+Maven :
+
+export PATH=$M2:/Users/raghugupta/Downloads/apache-maven-3.5.0/bin
+
+
+
+Steps :
+
+Look at application.yml and change properties accordingly.
+
+Upload project as Maven Project in Eclipse
+
+From Command Line : 
+
+1. Java 8
+2. Configure Maven if not present export PATH=$PATH:/Users/Downloads/apache-maven-3.5.0/bin
+
+mvn clean install -DskipTests
+java -jar target/ROOT.war
+
+
+Consumer will start consuming.
+

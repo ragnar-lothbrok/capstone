@@ -1,0 +1,25 @@
+producer:
+    bootstrap: localhost:9092
+    brokers: localhost:9092
+    acks: all
+    retries: 3
+    transactionTopic: 
+      topic: transaction_topic
+      partitionCount: 1
+      filePath: /Users/raghugupta/Documents/Capstone/transaction.csv 
+      avroSchemaPath: schema/transaction.avro
+    merchantTopic: 
+      topic: merchant_topic
+      partitionCount: 1
+      filePath: /Users/raghugupta/Documents/Capstone/merchant.csv
+      avroSchemaPath: schema/merchant.avro
+    cardTopic: 
+      topic: card_topic
+      partitionCount: 1
+      filePath: /Users/raghugupta/Documents/Capstone/card.csv
+      avroSchemaPath: schema/card.avro
+    customerTopic: 
+      topic: customer_topic
+      partitionCount: 1
+      filePath: /Users/raghugupta/Documents/Capstone/customer.csv
+      avroSchemaPath: schema/customer.avro
