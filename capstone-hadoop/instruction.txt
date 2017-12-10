@@ -1,0 +1,16 @@
+Download Flume :
+
+apache-flume-1.8.0-bin
+
+../bin/flume-ng agent -n agent -c conf -f flume_kafka_tx_log.conf 
+
+
+sudo hadoop jar target/capstone-hadoop-0.0.1-SNAPSHOT.jar com.edureka.hadoop.DailyMerchantTransactionCountMRJob /transaction_log
+
+
+sudo hadoop jar target/capstone-hadoop-0.0.1-SNAPSHOT.jar com.edureka.hadoop.DailyCustomerTransactionCountMRJob /transaction_log
+
+
+sudo hadoop jar target/capstone-hadoop-0.0.1-SNAPSHOT.jar com.edureka.hadoop.DailyTransactionCountMRJob /transaction_log
+
+
