@@ -15,7 +15,6 @@ import java.util.Set;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -29,10 +28,9 @@ import com.datastax.spark.connector.japi.rdd.CassandraTableScanJavaRDD;
 import com.edureka.capstone.BankMerchantTransaction;
 import com.edureka.capstone.CustomerTransactionCounter;
 import com.edureka.capstone.DailyTransactionCounter;
+import com.edureka.capstone.FileProperties;
 import com.edureka.capstone.MerchantTransactionCounter;
 import com.edureka.capstone.Transaction;
-import com.edureka.capstone.helper.AvroSchemaDefinitionLoader;
-import com.edureka.capstone.helper.PropertyFileReader;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 
@@ -42,8 +40,6 @@ import scala.Tuple2;
 import org.apache.spark.streaming.Duration;
 
 public class SparkStreamingTransactionJob {
-
-	private static final Logger logger = Logger.getLogger(SparkStreamingTransactionJob.class);
 
 	private static JavaStreamingContext ssc;
 
@@ -56,7 +52,7 @@ public class SparkStreamingTransactionJob {
 		@Override
 		public void call(Tuple2<String, String> arg0) throws Exception {
 			Schema.Parser parser = new Schema.Parser();
-			Schema schema = parser.parse(AvroSchemaDefinitionLoader.fromFile("schema/transaction.avro").get());
+			Schema schema = parser.parse(FileProperties.TRANSACTION_AVRO);
 			Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
 			GenericRecord record = recordInjection.invert(arg0._2).get();
 
@@ -177,31 +173,32 @@ public class SparkStreamingTransactionJob {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		Properties prop = new Properties();
-		try {
-			prop = PropertyFileReader.readPropertyFile();
-		} catch (Exception e1) {
-			logger.error(e1.getMessage());
-		}
+		Properties prop = FileProperties.properties;
 
-		SparkConf conf = new SparkConf().setAppName("kafka-sandbox").setMaster("local[*]");
+		SparkConf conf = null;
+		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
+			conf = new SparkConf().setMaster("local[*]");
+		} else {
+			conf = new SparkConf();
+		}
+		conf.setAppName(SparkStreamingTransactionJob.class.getName());
+		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
+		conf.setAppName(SparkStreamingCardJob.class.getName());
+		conf.set("hadoop.home.dir", "/");
+
 		ssc = new JavaStreamingContext(conf, new Duration(2000));
 
 		Map<String, String> kafkaParams = new HashMap<>();
 
-		kafkaParams.put("metadata.broker.list", "192.168.0.15:9092");
-		kafkaParams.put("auto.offset.reset", "largest");
-		kafkaParams.put("group.id", "transaction");
-		kafkaParams.put("enable.auto.commit", "true");
+		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
+		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
+		kafkaParams.put("group.id", prop.get("group.id").toString());
+		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+
 		Set<String> topics = Collections.singleton("transaction_topic");
 
 		JavaPairInputDStream<String, String> directKafkaStream = KafkaUtils.createDirectStream(ssc, String.class,
 				String.class, StringDecoder.class, StringDecoder.class, kafkaParams, topics);
-
-		conf.setAppName(prop.getProperty("com.smcc.spark.app.name"));
-		conf.setMaster("local[*]");
-		conf.set("spark.cassandra.connection.host", prop.getProperty("com.smcc.app.cassandra.host"));
-		conf.set("hadoop.home.dir", "/");
 
 		VoidFunction<JavaPairRDD<String, String>> iterateFunc = new VoidFunction<JavaPairRDD<String, String>>() {
 

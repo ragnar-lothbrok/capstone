@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -24,7 +23,7 @@ import org.apache.spark.api.java.function.Function2;
 import com.datastax.spark.connector.japi.CassandraJavaUtil;
 import com.datastax.spark.connector.japi.CassandraRow;
 import com.datastax.spark.connector.japi.SparkContextJavaFunctions;
-import com.edureka.capstone.helper.PropertyFileReader;
+import com.edureka.capstone.FileProperties;
 import com.google.common.collect.Lists;
 
 import scala.Tuple2;
@@ -32,25 +31,21 @@ import scala.Tuple3;
 
 public class BankMerchantAggregation {
 
-	private static final Logger logger = Logger.getLogger(SparkStreamingCardJob.class);
-
 	public static void main(String[] args) {
 
 		NumberFormat formatter = new DecimalFormat("#0.00");
 		
-		Integer topN = 10;
-		Properties prop = new Properties();
-		try {
-			prop = PropertyFileReader.readPropertyFile();
-		} catch (Exception e1) {
-			logger.error(e1.getMessage());
+		Properties prop = FileProperties.properties;
+		Integer topN = Integer.parseInt(prop.get("topxmerchants").toString());
+		
+		SparkConf conf  = null;
+		if(Boolean.parseBoolean(prop.get("localmode").toString())) {
+			conf = new SparkConf().setMaster("local[*]");
+		}else {
+			conf = new SparkConf();
 		}
-
-		SparkConf conf = new SparkConf().setAppName("cassandra-sandbox").setMaster("local[*]");
-
-		conf.setAppName(prop.getProperty("com.smcc.spark.app.name"));
-		conf.setMaster("local[*]");
-		conf.set("spark.cassandra.connection.host", prop.getProperty("com.smcc.app.cassandra.host"));
+		conf.setAppName(BankMerchantAggregation.class.getName());
+		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
 		conf.set("hadoop.home.dir", "/");
 
 		JavaSparkContext javaSparkContext = new JavaSparkContext(conf);
