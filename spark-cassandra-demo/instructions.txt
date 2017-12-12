@@ -5,7 +5,7 @@ CREATE KEYSPACE capstone WITH replication = {'class': 'SimpleStrategy','replicat
 
 
 CREATE TABLE carddetails (
-	cardId bigint PRIMARY KEY,
+	cardId bigint,
 	customerId bigint,
 	bank text,
 	type text,
@@ -13,7 +13,8 @@ CREATE TABLE carddetails (
 	expiryMonth int,
 	expiryYear int,
 	cardNum text,
-	cardLimit float);
+	cardLimit float,
+	PRIMARY KEY ((cardId),bank));
 	
 
 CREATE TABLE customer (
@@ -86,6 +87,28 @@ CREATE TABLE daily_transaction (
     orderbelow1000 counter,
     orderbelow2000 counter,
     orderabove2000 counter
+);
+
+CREATE MATERIALIZED VIEW bank_by_customer AS  SELECT customerId,bank FROM carddetails WHERE customerId is not null and bank is not null PRIMARY KEY ((customerId),bank,cardId);
+
+
+
+CREATE TABLE bank_merchant_transaction (
+    date text,
+    bank text,
+    merchantid bigint,
+    totalamount float,
+    ordercount int,
+    PRIMARY KEY ((date),bank,merchantid)
+);
+
+
+//Not in use
+CREATE TABLE bank_total_transaction (
+    date text,
+    bank text,
+    totalAmount float,
+    PRIMARY KEY ((date,bank),totalAmount)
 );
 
 //http://msvaljek.blogspot.in/2015/12/stream-processing-with-spring-kafka_13.html

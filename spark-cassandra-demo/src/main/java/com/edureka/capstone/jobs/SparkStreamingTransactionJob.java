@@ -24,6 +24,9 @@ import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 
+import com.datastax.spark.connector.japi.CassandraRow;
+import com.datastax.spark.connector.japi.rdd.CassandraTableScanJavaRDD;
+import com.edureka.capstone.BankMerchantTransaction;
 import com.edureka.capstone.CustomerTransactionCounter;
 import com.edureka.capstone.DailyTransactionCounter;
 import com.edureka.capstone.MerchantTransactionCounter;
@@ -43,7 +46,7 @@ public class SparkStreamingTransactionJob {
 	private static final Logger logger = Logger.getLogger(SparkStreamingTransactionJob.class);
 
 	private static JavaStreamingContext ssc;
-	
+
 	static SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
@@ -62,52 +65,87 @@ public class SparkStreamingTransactionJob {
 					Long.parseLong(record.get("merchantId").toString()), record.get("status").toString(),
 					Long.parseLong(record.get("timestamp").toString()), record.get("invoiceNum").toString(),
 					Float.parseFloat(record.get("invoiceAmount").toString()));
-			
+
 			Calendar cal = Calendar.getInstance();
 			cal.setTimeInMillis(transaction.getTimestamp());
-			
+
 			List<Transaction> transactionDetailList = Arrays.asList(transaction);
 
 			JavaRDD<Transaction> newRDD = ssc.sparkContext().parallelize(transactionDetailList);
 
 			javaFunctions(newRDD).writerBuilder("capstone", "transaction", mapToRow(Transaction.class))
 					.saveToCassandra();
-			
+
+			CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(ssc.sparkContext())
+					.cassandraTable("capstone", "bank_by_customer")
+					.where("customerid = " + transaction.getCustomerid());
+			String bank = null;
+			if (customerDetails.count() > 0) {
+				bank = customerDetails.first().getString("bank");
+			}
+
 			CustomerTransactionCounter customerTransactionCounter = new CustomerTransactionCounter();
 			MerchantTransactionCounter merchantTransactionCounter = new MerchantTransactionCounter();
 			DailyTransactionCounter dailyTransactionCounter = new DailyTransactionCounter();
-			
+
 			customerTransactionCounter.setCustomerid(Long.parseLong(record.get("customerId").toString()));
 			merchantTransactionCounter.setMerchantid(Long.parseLong(record.get("merchantId").toString()));
 			dailyTransactionCounter.setDate(sdf.format(cal.getTime()));
-			
-			if(transaction.getStatus().equalsIgnoreCase("SUCCESS")) {
+
+			if (transaction.getStatus().equalsIgnoreCase("SUCCESS")) {
 				customerTransactionCounter.setOrdersuccesscounter(1l);
 				merchantTransactionCounter.setOrdersuccesscounter(1l);
 				dailyTransactionCounter.setOrdersuccesscounter(1l);
-			}else {
+			} else {
 				customerTransactionCounter.setOrdercancelcounter(1l);
 				merchantTransactionCounter.setOrdercancelcounter(1l);
 				dailyTransactionCounter.setOrdercancelcounter(1l);
 			}
-			
-			if(transaction.getInvoiceamount() <= 500) {
+
+			if (transaction.getInvoiceamount() <= 500) {
 				customerTransactionCounter.setOrderbelow500(1l);
 				merchantTransactionCounter.setOrderbelow500(1l);
 				dailyTransactionCounter.setOrderbelow500(1l);
-			}else if(transaction.getInvoiceamount() > 500 && transaction.getInvoiceamount() <= 1000) {
+			} else if (transaction.getInvoiceamount() > 500 && transaction.getInvoiceamount() <= 1000) {
 				customerTransactionCounter.setOrderbelow1000(1l);
 				merchantTransactionCounter.setOrderbelow1000(1l);
 				dailyTransactionCounter.setOrderbelow1000(1l);
-			}else if(transaction.getInvoiceamount() > 1000 && transaction.getInvoiceamount() < 2000) {
+			} else if (transaction.getInvoiceamount() > 1000 && transaction.getInvoiceamount() < 2000) {
 				customerTransactionCounter.setOrderbelow2000(1l);
 				merchantTransactionCounter.setOrderbelow2000(1l);
 				dailyTransactionCounter.setOrderbelow2000(1l);
-			}else {
+			} else {
 				customerTransactionCounter.setOrderabove2000(1l);
 				merchantTransactionCounter.setOrderabove2000(1l);
 				dailyTransactionCounter.setOrderabove2000(1l);
 			}
+
+			// Bank merchant transaction
+			BankMerchantTransaction bankMerchantTransaction = new BankMerchantTransaction(sdf.format(cal.getTime()),
+					bank, transaction.getMerchantid(), transaction.getInvoiceamount(), 0l);
+
+			CassandraTableScanJavaRDD<CassandraRow> bankMerchantDetails = javaFunctions(ssc.sparkContext())
+					.cassandraTable("capstone", "bank_merchant_transaction")
+					.where("date = '" + bankMerchantTransaction.getDate() + "' and bank = '"
+							+ bankMerchantTransaction.getBank() + "' and merchantid="
+							+ bankMerchantTransaction.getMerchantid());
+			float amount = 0f;
+			Long orderCount = 0l;
+			if (bankMerchantDetails.count() > 0) {
+				amount = bankMerchantDetails.first().getFloat("totalamount");
+				orderCount = bankMerchantDetails.first().getLong("ordercount");
+			}
+
+			bankMerchantTransaction.setTotalamount(amount + bankMerchantTransaction.getTotalamount());
+			bankMerchantTransaction.setOrdercount(orderCount + 1);
+			List<BankMerchantTransaction> bankMerchantAmountSpendList = Arrays.asList(bankMerchantTransaction);
+
+			JavaRDD<BankMerchantTransaction> bankMerchantTxRDD = ssc.sparkContext()
+					.parallelize(bankMerchantAmountSpendList);
+
+			javaFunctions(bankMerchantTxRDD)
+					.writerBuilder("capstone", "bank_merchant_transaction", mapToRow(BankMerchantTransaction.class))
+					.saveToCassandra();
 
 			List<CustomerTransactionCounter> customerTransactionCounterList = Arrays.asList(customerTransactionCounter);
 
@@ -117,8 +155,7 @@ public class SparkStreamingTransactionJob {
 			javaFunctions(customerTxRDD)
 					.writerBuilder("capstone", "customer_transaction", mapToRow(CustomerTransactionCounter.class))
 					.saveToCassandra();
-			
-			
+
 			List<MerchantTransactionCounter> merchantTransactionCounterList = Arrays.asList(merchantTransactionCounter);
 
 			JavaRDD<MerchantTransactionCounter> merchantTxRDD = ssc.sparkContext()
@@ -127,11 +164,10 @@ public class SparkStreamingTransactionJob {
 			javaFunctions(merchantTxRDD)
 					.writerBuilder("capstone", "merchant_transaction", mapToRow(MerchantTransactionCounter.class))
 					.saveToCassandra();
-			
+
 			List<DailyTransactionCounter> dailyTransactionCounterList = Arrays.asList(dailyTransactionCounter);
 
-			JavaRDD<DailyTransactionCounter> dailyTxRDD = ssc.sparkContext()
-					.parallelize(dailyTransactionCounterList);
+			JavaRDD<DailyTransactionCounter> dailyTxRDD = ssc.sparkContext().parallelize(dailyTransactionCounterList);
 
 			javaFunctions(dailyTxRDD)
 					.writerBuilder("capstone", "daily_transaction", mapToRow(DailyTransactionCounter.class))
@@ -154,7 +190,9 @@ public class SparkStreamingTransactionJob {
 		Map<String, String> kafkaParams = new HashMap<>();
 
 		kafkaParams.put("metadata.broker.list", "192.168.0.15:9092");
-		kafkaParams.put("auto.offset.reset", "smallest");
+		kafkaParams.put("auto.offset.reset", "largest");
+		kafkaParams.put("group.id", "transaction");
+		kafkaParams.put("enable.auto.commit", "true");
 		Set<String> topics = Collections.singleton("transaction_topic");
 
 		JavaPairInputDStream<String, String> directKafkaStream = KafkaUtils.createDirectStream(ssc, String.class,

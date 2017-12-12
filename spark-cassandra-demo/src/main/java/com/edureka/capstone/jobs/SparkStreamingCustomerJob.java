@@ -79,7 +79,9 @@ public class SparkStreamingCustomerJob {
 		Map<String, String> kafkaParams = new HashMap<>();
 
 		kafkaParams.put("metadata.broker.list", "192.168.0.15:9092");
-		kafkaParams.put("auto.offset.reset", "smallest");
+		kafkaParams.put("auto.offset.reset", "largest");
+		kafkaParams.put("group.id", "customer");
+		kafkaParams.put("enable.auto.commit", "true");
 		Set<String> topics = Collections.singleton("customer_topic");
 
 		JavaPairInputDStream<String, String> directKafkaStream = KafkaUtils.createDirectStream(ssc, String.class,
