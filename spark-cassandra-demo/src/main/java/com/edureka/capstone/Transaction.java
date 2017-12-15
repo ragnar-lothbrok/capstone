@@ -12,6 +12,15 @@ public class Transaction implements Serializable {
 	private long timestamp;
 	private String invoicenumber;
 	private float invoiceamount;
+	private String segment;
+
+	public String getSegment() {
+		return segment;
+	}
+
+	public void setSegment(String segment) {
+		this.segment = segment;
+	}
 
 	public String getTransactionid() {
 		return transactionid;
@@ -70,7 +79,7 @@ public class Transaction implements Serializable {
 	}
 
 	public Transaction(String transactionid, Long customerid, Long merchantid, String status, long timestamp,
-			String invoicenumber, float invoiceamount) {
+			String invoicenumber, float invoiceamount, String segment) {
 		super();
 		this.transactionid = transactionid;
 		this.customerid = customerid;
@@ -79,6 +88,7 @@ public class Transaction implements Serializable {
 		this.timestamp = timestamp;
 		this.invoicenumber = invoicenumber;
 		this.invoiceamount = invoiceamount;
+		this.segment = segment;
 	}
 
 }

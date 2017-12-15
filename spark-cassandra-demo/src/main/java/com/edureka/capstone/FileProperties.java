@@ -11,12 +11,18 @@ public class FileProperties {
 		properties.put("com.smcc.app.cassandra.host","localhost");
 		properties.put("com.smcc.app.cassandra.port","9042");
 		properties.put("localmode",true);
-		properties.put("topxmerchants",10);
+		properties.put("topxmerchants",4);
 		
 		properties.put("metadata.broker.list", "192.168.0.15:9092");
 		properties.put("auto.offset.reset", "largest");
 		properties.put("group.id", "groupid");
 		properties.put("enable.auto.commit", "true");
+		
+		properties.put("topmerchantcount", 5);
+		properties.put("topSegmentCount", 5);
+		
+		
+		properties.put("yearstats", 2012);
 	}
 	
 	public static final String CUSTOMER_AVRO = "{\n" + 
@@ -85,7 +91,8 @@ public class FileProperties {
 			"        { \"name\": \"status\", \"type\": \"string\" },\n" + 
 			"        { \"name\": \"timestamp\", \"type\": \"long\" },\n" + 
 			"        { \"name\": \"invoiceNum\", \"type\": \"string\" },\n" + 
-			"        { \"name\": \"invoiceAmount\", \"type\": \"float\" }\n" + 
+			"        { \"name\": \"invoiceAmount\", \"type\": \"float\" },\n" + 
+			"        { \"name\": \"segment\", \"type\": \"string\" }\n" + 
 			"    ]\n" + 
 			"}";
 	

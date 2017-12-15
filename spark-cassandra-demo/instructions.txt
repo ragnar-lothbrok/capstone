@@ -55,7 +55,8 @@ CREATE TABLE capstone.transaction (
     invoicenumber text,
     merchantid bigint,
     status text,
-    timestamp bigint
+    timestamp bigint,
+    segment text
 );
 
 
@@ -94,12 +95,15 @@ CREATE MATERIALIZED VIEW bank_by_customer AS  SELECT customerId,bank FROM cardde
 
 
 CREATE TABLE bank_merchant_transaction (
+	year int,
+	month int,
     date text,
     bank text,
     merchantid bigint,
     totalamount float,
     ordercount int,
-    PRIMARY KEY ((date),bank,merchantid)
+    segment text,
+    PRIMARY KEY ((year,month),bank,merchantid,segment,date)
 );
 
 
@@ -110,6 +114,9 @@ CREATE TABLE bank_total_transaction (
     totalAmount float,
     PRIMARY KEY ((date,bank),totalAmount)
 );
+
+
+mvn clean package
 
 
 spark-submit --class com.edureka.capstone.jobs.BankMerchantAggregation /Users/raghugupta/Documents/gitrepo/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar

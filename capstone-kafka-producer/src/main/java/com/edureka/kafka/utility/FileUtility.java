@@ -58,6 +58,7 @@ public class FileUtility {
 					}
 					avroRecord.put("invoiceNum", split[5].trim());
 					avroRecord.put("invoiceAmount", Float.parseFloat(split[6]));
+					avroRecord.put("segment", split[7].trim());
 				} else if ("card".equalsIgnoreCase(schema.getName())) {
 					avroRecord.put("cardId", Long.parseLong(split[0]));
 					avroRecord.put("customerId", Long.parseLong(split[1]));

@@ -72,7 +72,7 @@ public class SparkStreamingCardJob {
 		}else {
 			conf = new SparkConf();
 		}
-		conf.setAppName(BankMerchantAggregation.class.getName());
+		conf.setAppName(BankMerchantAggregationJob.class.getName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
 		conf.setAppName(SparkStreamingCardJob.class.getName());
 		conf.set("hadoop.home.dir", "/");

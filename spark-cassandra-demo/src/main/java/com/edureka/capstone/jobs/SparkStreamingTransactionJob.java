@@ -4,6 +4,7 @@ import static com.datastax.spark.connector.japi.CassandraJavaUtil.javaFunctions;
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -43,6 +44,8 @@ public class SparkStreamingTransactionJob {
 
 	private static JavaStreamingContext ssc;
 
+	private static List<String> transactionIds = new ArrayList<String>();
+
 	static SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
@@ -60,7 +63,7 @@ public class SparkStreamingTransactionJob {
 					Long.parseLong(record.get("customerId").toString()),
 					Long.parseLong(record.get("merchantId").toString()), record.get("status").toString(),
 					Long.parseLong(record.get("timestamp").toString()), record.get("invoiceNum").toString(),
-					Float.parseFloat(record.get("invoiceAmount").toString()));
+					Float.parseFloat(record.get("invoiceAmount").toString()), record.get("segment").toString());
 
 			Calendar cal = Calendar.getInstance();
 			cal.setTimeInMillis(transaction.getTimestamp());
@@ -118,15 +121,23 @@ public class SparkStreamingTransactionJob {
 
 			// Bank merchant transaction
 			BankMerchantTransaction bankMerchantTransaction = new BankMerchantTransaction(sdf.format(cal.getTime()),
-					bank, transaction.getMerchantid(), transaction.getInvoiceamount(), 0l);
+					bank, transaction.getMerchantid(), transaction.getInvoiceamount(), 0l, transaction.getSegment(),
+					cal.get(Calendar.YEAR), cal.get(Calendar.MONTH));
 
 			CassandraTableScanJavaRDD<CassandraRow> bankMerchantDetails = javaFunctions(ssc.sparkContext())
 					.cassandraTable("capstone", "bank_merchant_transaction")
-					.where("date = '" + bankMerchantTransaction.getDate() + "' and bank = '"
+					.where("year="+cal.get(Calendar.YEAR)+" and month="+cal.get(Calendar.MONTH)+" and date = '" + bankMerchantTransaction.getDate() + "' and bank = '"
 							+ bankMerchantTransaction.getBank() + "' and merchantid="
-							+ bankMerchantTransaction.getMerchantid());
+							+ bankMerchantTransaction.getMerchantid() + " and segment='"
+							+ bankMerchantTransaction.getSegment() + "'");
 			float amount = 0f;
 			Long orderCount = 0l;
+
+			if (transactionIds.indexOf(transaction.getTransactionid()) == -1) {
+				transactionIds.add(transaction.getTransactionid());
+			} else {
+				System.out.println();
+			}
 			if (bankMerchantDetails.count() > 0) {
 				amount = bankMerchantDetails.first().getFloat("totalamount");
 				orderCount = bankMerchantDetails.first().getLong("ordercount");
