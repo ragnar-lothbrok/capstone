@@ -70,6 +70,7 @@ public class SparkStreamingMerchantJob {
 	public static void main(String[] args) throws InterruptedException {
 
 		try {
+			
 			Properties prop = FileProperties.properties;
 
 			SparkConf conf = null;
@@ -96,6 +97,8 @@ public class SparkStreamingMerchantJob {
 			kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
 			kafkaParams.put("group.id", prop.get("group.id").toString());
 			kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+			kafkaParams.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+			kafkaParams.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
 			Set<String> topics = Collections.singleton("merchant_topic");
 
