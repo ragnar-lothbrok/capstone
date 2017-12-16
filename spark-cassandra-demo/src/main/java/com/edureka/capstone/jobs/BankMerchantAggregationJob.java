@@ -86,6 +86,11 @@ public class BankMerchantAggregationJob {
 
 		rdd.cache();
 		genderRdd.cache();
+		
+		Long rddCount = rdd.count();
+		Long rddGenderCount = genderRdd.count();
+		
+		System.out.println(" rddCount= "+rddCount+" rddGenderAccount = "+rddGenderCount);
 
 		JavaPairRDD<String, Tuple2<Float, Long>> pairRDD = rdd.mapToPair(
 				r -> new Tuple2<String, Tuple2<Float, Long>>(r.getString("bank").toString(), new Tuple2<Float, Long>(
