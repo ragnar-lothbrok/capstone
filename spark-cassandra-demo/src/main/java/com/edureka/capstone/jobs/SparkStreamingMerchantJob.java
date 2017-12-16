@@ -43,6 +43,8 @@ public class SparkStreamingMerchantJob {
 		public void call(Tuple2<String, String> arg0) throws Exception {
 
 			
+			System.out.println("========" + arg0._2());
+			
 			MerchantDto merchantDto = gson.fromJson( arg0._2(), MerchantDto.class);
 			
 			System.out.println("MerchantDto = " + merchantDto);
@@ -95,8 +97,6 @@ public class SparkStreamingMerchantJob {
 			kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
 			kafkaParams.put("group.id", prop.get("group.id").toString());
 			kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
-			kafkaParams.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-			kafkaParams.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
 			Set<String> topics = Collections.singleton("merchant_topic");
 
