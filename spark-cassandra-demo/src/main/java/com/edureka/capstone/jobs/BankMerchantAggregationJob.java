@@ -53,7 +53,7 @@ public class BankMerchantAggregationJob {
 		} else {
 			conf = new SparkConf();
 		}
-		conf.setAppName(BankMerchantAggregationJob.class.getName());
+		conf.setAppName(BankMerchantAggregationJob.class.getSimpleName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
 		if(prop.get("spark.cassandra.auth.username") != null) {
 			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
@@ -61,9 +61,12 @@ public class BankMerchantAggregationJob {
 		}
 		conf.set("hadoop.home.dir", "/");
 
+		System.out.println("###############1");
 		javaSparkContext = new JavaSparkContext(conf);
 
 		SparkContextJavaFunctions functions = CassandraJavaUtil.javaFunctions(javaSparkContext);
+		
+		System.out.println("###############2");
 
 		Integer year = Integer.parseInt(prop.get("yearstats").toString());
 
@@ -80,9 +83,13 @@ public class BankMerchantAggregationJob {
 
 		rdd = functions.cassandraTable("capstone", "bank_merchant_transaction")
 				.where("year = " + year + " and month in (" + months + ")");
+		
+		System.out.println("###############3");
 
 		genderRdd = functions.cassandraTable("capstone", "merchant_gender_transaction")
 				.where("year = " + year + " and month in (" + months + ")");
+		
+		System.out.println("###############4");
 
 		rdd.cache();
 		genderRdd.cache();
@@ -90,7 +97,7 @@ public class BankMerchantAggregationJob {
 		Long rddCount = rdd.count();
 		Long rddGenderCount = genderRdd.count();
 		
-		System.out.println(" rddCount= "+rddCount+" rddGenderAccount = "+rddGenderCount);
+		System.out.println("======== rddCount= "+rddCount+" rddGenderAccount = "+rddGenderCount);
 
 		JavaPairRDD<String, Tuple2<Float, Long>> pairRDD = rdd.mapToPair(
 				r -> new Tuple2<String, Tuple2<Float, Long>>(r.getString("bank").toString(), new Tuple2<Float, Long>(
