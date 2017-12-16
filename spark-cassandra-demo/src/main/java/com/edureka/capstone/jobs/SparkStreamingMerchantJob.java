@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -23,8 +21,8 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
 
 import com.edureka.capstone.FileProperties;
 import com.edureka.capstone.Merchant;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
+import com.edureka.capstone.dtos.MerchantDto;
+import com.google.gson.Gson;
 
 import kafka.serializer.StringDecoder;
 import scala.Tuple2;
@@ -34,6 +32,8 @@ import org.apache.spark.streaming.Duration;
 public class SparkStreamingMerchantJob {
 
 	private static JavaStreamingContext ssc;
+	
+	private static Gson gson = new Gson();
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
 
@@ -42,20 +42,18 @@ public class SparkStreamingMerchantJob {
 		@Override
 		public void call(Tuple2<String, String> arg0) throws Exception {
 
-			System.out.println("tuple details = " + arg0._1());
-			System.out.println("tuple value details = " + arg0._2());
-			Schema.Parser parser = new Schema.Parser();
-			Schema schema = parser.parse(FileProperties.MERCHANT_AVRO);
-			Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
-			GenericRecord record = recordInjection.invert(arg0._2).get();
+			
+			MerchantDto merchantDto = gson.fromJson( arg0._2(), MerchantDto.class);
+			
+			System.out.println("MerchantDto = " + merchantDto);
 
-			Merchant merchant = new Merchant(Long.parseLong(record.get("merchantId").toString()),
-					record.get("merchantName").toString(), record.get("email").toString(),
-					record.get("address").toString(), record.get("state").toString(), record.get("country").toString(),
-					Long.parseLong(record.get("pincode").toString()), record.get("segment").toString(),
-					record.get("taxRegNum").toString(), record.get("description").toString(),
-					Long.parseLong(record.get("startDate").toString()),
-					Integer.parseInt(record.get("merchantType").toString()), record.get("mobileNumber").toString());
+			Merchant merchant = new Merchant(merchantDto.getMerchantId().longValue(),
+					merchantDto.getMerchantName(), merchantDto.getEmail(),
+					merchantDto.getAddress(), merchantDto.getState(), merchantDto.getCountry(),
+					merchantDto.getPincode().longValue(), merchantDto.getSegment(),
+					merchantDto.getTaxRegNum(), merchantDto.getDescription(),
+					merchantDto.getStartDate().longValue(),
+					merchantDto.getMerchantType(), merchantDto.getMobileNumber().toString());
 
 			System.out.println("merchant = " + merchant);
 
