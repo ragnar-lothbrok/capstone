@@ -6,20 +6,24 @@ producer:
     transactionTopic: 
       topic: transaction_topic
       partitionCount: 1
-      filePath: /Users/raghugupta/Documents/Capstone/transaction.csv 
+#      filePath: /Users/raghugupta/Documents/Capstone/transaction.csv
+      filePath: /tmp/capstonefiles/transaction.csv
       avroSchemaPath: schema/transaction.avro
     merchantTopic: 
       topic: merchant_topic
       partitionCount: 1
-      filePath: /Users/raghugupta/Documents/Capstone/merchant.csv
+#      filePath: /Users/raghugupta/Documents/Capstone/merchant.csv
+      filePath: /tmp/capstonefiles/merchant.csv
       avroSchemaPath: schema/merchant.avro
     cardTopic: 
       topic: card_topic
       partitionCount: 1
-      filePath: /Users/raghugupta/Documents/Capstone/card.csv
+#      filePath: /Users/raghugupta/Documents/Capstone/card.csv
+      filePath: /tmp/capstonefiles/card.csv
       avroSchemaPath: schema/card.avro
     customerTopic: 
       topic: customer_topic
       partitionCount: 1
-      filePath: /Users/raghugupta/Documents/Capstone/customer.csv
+#      filePath: /Users/raghugupta/Documents/Capstone/customer.csv
+      filePath: /tmp/capstonefiles/customer.csv
       avroSchemaPath: schema/customer.avro
