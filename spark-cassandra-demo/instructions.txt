@@ -131,15 +131,17 @@ mvn clean package
 cd /usr/local/spark/bin
 
 
-spark-submit --class com.edureka.capstone.jobs.BankMerchantAggregationJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+/usr/local/spark/bin/spark-submit --class com.edureka.capstone.jobs.BankMerchantAggregationJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
-spark-submit --class com.edureka.capstone.jobs.SparkStreamingCardJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+/usr/local/spark/bin/spark-submit --class com.edureka.capstone.jobs.SparkStreamingCardJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
-spark-submit --class com.edureka.capstone.jobs.SparkStreamingCustomerJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+/usr/local/spark/bin/spark-submit --class com.edureka.capstone.jobs.SparkStreamingCustomerJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
-spark-submit --class com.edureka.capstone.jobs.SparkStreamingMerchantJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+/usr/local/spark/bin/spark-submit --class com.edureka.capstone.jobs.SparkStreamingMerchantJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
-spark-submit --class com.edureka.capstone.jobs.SparkStreamingTransactionJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+/usr/local/spark/bin/spark-submit --class com.edureka.capstone.jobs.SparkStreamingTransactionJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
+
+bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic merchant_topic --from-beginning
 
 //http://msvaljek.blogspot.in/2015/12/stream-processing-with-spring-kafka_13.html

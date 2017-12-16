@@ -61,13 +61,10 @@ public class BankMerchantAggregationJob {
 		}
 		conf.set("hadoop.home.dir", "/");
 
-		System.out.println("###############1");
 		javaSparkContext = new JavaSparkContext(conf);
 
 		SparkContextJavaFunctions functions = CassandraJavaUtil.javaFunctions(javaSparkContext);
 		
-		System.out.println("###############2");
-
 		Integer year = Integer.parseInt(prop.get("yearstats").toString());
 
 		JavaRDD<CassandraRow> rdd = null;
@@ -84,13 +81,9 @@ public class BankMerchantAggregationJob {
 		rdd = functions.cassandraTable("capstone", "bank_merchant_transaction")
 				.where("year = " + year + " and month in (" + months + ")");
 		
-		System.out.println("###############3");
-
 		genderRdd = functions.cassandraTable("capstone", "merchant_gender_transaction")
 				.where("year = " + year + " and month in (" + months + ")");
 		
-		System.out.println("###############4");
-
 		rdd.cache();
 		genderRdd.cache();
 		

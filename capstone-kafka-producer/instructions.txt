@@ -86,3 +86,6 @@ java -jar target/ROOT.war
 
 Consumer will start consuming.
 
+
+bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic merchant_topic --from-beginning
+
