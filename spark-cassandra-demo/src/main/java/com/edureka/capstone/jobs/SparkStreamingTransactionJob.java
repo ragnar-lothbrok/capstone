@@ -4,12 +4,10 @@ import static com.datastax.spark.connector.japi.CassandraJavaUtil.javaFunctions;
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -18,7 +16,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -30,6 +27,7 @@ import com.edureka.capstone.BankMerchantTransaction;
 import com.edureka.capstone.CustomerTransactionCounter;
 import com.edureka.capstone.DailyTransactionCounter;
 import com.edureka.capstone.FileProperties;
+import com.edureka.capstone.MerchantGenderTransaction;
 import com.edureka.capstone.MerchantTransactionCounter;
 import com.edureka.capstone.Transaction;
 import com.twitter.bijection.Injection;
@@ -43,8 +41,6 @@ import org.apache.spark.streaming.Duration;
 public class SparkStreamingTransactionJob {
 
 	private static JavaStreamingContext ssc;
-
-	private static List<String> transactionIds = new ArrayList<String>();
 
 	static SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
 
@@ -68,11 +64,7 @@ public class SparkStreamingTransactionJob {
 			Calendar cal = Calendar.getInstance();
 			cal.setTimeInMillis(transaction.getTimestamp());
 
-			List<Transaction> transactionDetailList = Arrays.asList(transaction);
-
-			JavaRDD<Transaction> newRDD = ssc.sparkContext().parallelize(transactionDetailList);
-
-			javaFunctions(newRDD).writerBuilder("capstone", "transaction", mapToRow(Transaction.class))
+			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(transaction))).writerBuilder("capstone", "transaction", mapToRow(Transaction.class))
 					.saveToCassandra();
 
 			CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(ssc.sparkContext())
@@ -120,24 +112,19 @@ public class SparkStreamingTransactionJob {
 			}
 
 			// Bank merchant transaction
-			BankMerchantTransaction bankMerchantTransaction = new BankMerchantTransaction(sdf.format(cal.getTime()),
-					bank, transaction.getMerchantid(), transaction.getInvoiceamount(), 0l, transaction.getSegment(),
+			BankMerchantTransaction bankMerchantTransaction = new BankMerchantTransaction(bank,
+					transaction.getMerchantid(), transaction.getInvoiceamount(), 0l, transaction.getSegment(),
 					cal.get(Calendar.YEAR), cal.get(Calendar.MONTH));
 
 			CassandraTableScanJavaRDD<CassandraRow> bankMerchantDetails = javaFunctions(ssc.sparkContext())
 					.cassandraTable("capstone", "bank_merchant_transaction")
-					.where("year="+cal.get(Calendar.YEAR)+" and month="+cal.get(Calendar.MONTH)+" and date = '" + bankMerchantTransaction.getDate() + "' and bank = '"
+					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH) + " and bank = '"
 							+ bankMerchantTransaction.getBank() + "' and merchantid="
 							+ bankMerchantTransaction.getMerchantid() + " and segment='"
 							+ bankMerchantTransaction.getSegment() + "'");
 			float amount = 0f;
 			Long orderCount = 0l;
 
-			if (transactionIds.indexOf(transaction.getTransactionid()) == -1) {
-				transactionIds.add(transaction.getTransactionid());
-			} else {
-				System.out.println();
-			}
 			if (bankMerchantDetails.count() > 0) {
 				amount = bankMerchantDetails.first().getFloat("totalamount");
 				orderCount = bankMerchantDetails.first().getLong("ordercount");
@@ -145,40 +132,48 @@ public class SparkStreamingTransactionJob {
 
 			bankMerchantTransaction.setTotalamount(amount + bankMerchantTransaction.getTotalamount());
 			bankMerchantTransaction.setOrdercount(orderCount + 1);
-			List<BankMerchantTransaction> bankMerchantAmountSpendList = Arrays.asList(bankMerchantTransaction);
 
-			JavaRDD<BankMerchantTransaction> bankMerchantTxRDD = ssc.sparkContext()
-					.parallelize(bankMerchantAmountSpendList);
-
-			javaFunctions(bankMerchantTxRDD)
+			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(bankMerchantTransaction)))
 					.writerBuilder("capstone", "bank_merchant_transaction", mapToRow(BankMerchantTransaction.class))
 					.saveToCassandra();
 
-			List<CustomerTransactionCounter> customerTransactionCounterList = Arrays.asList(customerTransactionCounter);
-
-			JavaRDD<CustomerTransactionCounter> customerTxRDD = ssc.sparkContext()
-					.parallelize(customerTransactionCounterList);
-
-			javaFunctions(customerTxRDD)
+			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(customerTransactionCounter)))
 					.writerBuilder("capstone", "customer_transaction", mapToRow(CustomerTransactionCounter.class))
 					.saveToCassandra();
 
-			List<MerchantTransactionCounter> merchantTransactionCounterList = Arrays.asList(merchantTransactionCounter);
-
-			JavaRDD<MerchantTransactionCounter> merchantTxRDD = ssc.sparkContext()
-					.parallelize(merchantTransactionCounterList);
-
-			javaFunctions(merchantTxRDD)
+			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(merchantTransactionCounter)))
 					.writerBuilder("capstone", "merchant_transaction", mapToRow(MerchantTransactionCounter.class))
 					.saveToCassandra();
 
-			List<DailyTransactionCounter> dailyTransactionCounterList = Arrays.asList(dailyTransactionCounter);
-
-			JavaRDD<DailyTransactionCounter> dailyTxRDD = ssc.sparkContext().parallelize(dailyTransactionCounterList);
-
-			javaFunctions(dailyTxRDD)
+			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(dailyTransactionCounter)))
 					.writerBuilder("capstone", "daily_transaction", mapToRow(DailyTransactionCounter.class))
 					.saveToCassandra();
+
+			CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(ssc.sparkContext())
+					.cassandraTable("capstone", "customer").where("customerid = " + transaction.getCustomerid());
+			String gender = null;
+			if (customerGenderDetails.count() > 0) {
+				gender = customerGenderDetails.first().getString("gender");
+			}
+
+			MerchantGenderTransaction merchantGenderTransaction = new MerchantGenderTransaction(
+					bankMerchantTransaction.getYear(), bankMerchantTransaction.getMonth(),
+					bankMerchantTransaction.getMerchantid(), transaction.getInvoiceamount(), gender);
+
+			CassandraTableScanJavaRDD<CassandraRow> merchantCustomerGenderDetails = javaFunctions(ssc.sparkContext())
+					.cassandraTable("capstone", "merchant_gender_transaction")
+					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH) + " and merchantid="
+							+ bankMerchantTransaction.getMerchantid() + " and gender='" + gender + "'");
+			amount = 0f;
+			if (merchantCustomerGenderDetails.count() > 0) {
+				amount = merchantCustomerGenderDetails.first().getFloat("amount");
+			}
+			merchantGenderTransaction.setAmount(amount + merchantGenderTransaction.getAmount());
+
+			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(merchantGenderTransaction)))
+					.writerBuilder("capstone", "merchant_gender_transaction", mapToRow(MerchantGenderTransaction.class))
+					.saveToCassandra();
+
 		}
 	};
 

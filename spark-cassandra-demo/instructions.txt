@@ -97,13 +97,22 @@ CREATE MATERIALIZED VIEW bank_by_customer AS  SELECT customerId,bank FROM cardde
 CREATE TABLE bank_merchant_transaction (
 	year int,
 	month int,
-    date text,
     bank text,
     merchantid bigint,
     totalamount float,
     ordercount int,
     segment text,
-    PRIMARY KEY ((year,month),bank,merchantid,segment,date)
+    PRIMARY KEY ((year,month),bank,merchantid,segment)
+);
+
+
+CREATE TABLE merchant_gender_transaction (
+	year int,
+	month int,
+    merchantid bigint,
+    gender text,
+    amount float,
+    PRIMARY KEY ((year,month),merchantid,gender)
 );
 
 

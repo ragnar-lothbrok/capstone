@@ -4,13 +4,10 @@ import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +38,6 @@ import scala.Tuple6;
 
 public class BankMerchantAggregationJob {
 
-	private static SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
-
 	private static JavaSparkContext javaSparkContext = null;
 
 	public static void main(String[] args) throws ParseException {
@@ -69,6 +64,7 @@ public class BankMerchantAggregationJob {
 		Integer year = Integer.parseInt(prop.get("yearstats").toString());
 
 		JavaRDD<CassandraRow> rdd = null;
+		JavaRDD<CassandraRow> genderRdd = null;
 		String months = "";
 		for (int i = 0; i < 12; i++) {
 			if (i == 11) {
@@ -81,7 +77,11 @@ public class BankMerchantAggregationJob {
 		rdd = functions.cassandraTable("capstone", "bank_merchant_transaction")
 				.where("year = " + year + " and month in (" + months + ")");
 
+		genderRdd = functions.cassandraTable("capstone", "merchant_gender_transaction")
+				.where("year = " + year + " and month in (" + months + ")");
+
 		rdd.cache();
+		genderRdd.cache();
 
 		JavaPairRDD<String, Tuple2<Float, Long>> pairRDD = rdd.mapToPair(
 				r -> new Tuple2<String, Tuple2<Float, Long>>(r.getString("bank").toString(), new Tuple2<Float, Long>(
@@ -153,7 +153,7 @@ public class BankMerchantAggregationJob {
 		JavaRDD<Tuple6<String, Long, Float, Long, String, String>> bankMerchantPairRDD = rdd
 				.map(r -> new Tuple6<String, Long, Float, Long, String, String>(r.getString("bank").toString(),
 						r.getLong("merchantid"), Float.parseFloat(r.getFloat("totalamount").toString()),
-						r.getLong("ordercount"), r.getString("date"), r.getString("segment")));
+						r.getLong("ordercount"), (r.getInt("month") + 1) + "", r.getString("segment")));
 
 		JavaPairRDD<String, Iterable<Tuple6<String, Long, Float, Long, String, String>>> bankMerchantPairRDDd = bankMerchantPairRDD
 				.groupBy(new Function<Tuple6<String, Long, Float, Long, String, String>, String>() {
@@ -174,6 +174,32 @@ public class BankMerchantAggregationJob {
 
 		topBanksTopMerchantTxAmount(formatter, topN, bankTotalAmountMap, bankMerchantPairRDDd);
 
+		topMerchantCustomerTxAmountByGender(merchantNameList, genderRdd);
+
+	}
+
+	private static void topMerchantCustomerTxAmountByGender(List<Long> merchantNameList,
+			JavaRDD<CassandraRow> genderRdd) {
+		List<Tuple2<Integer, Tuple4<Long, Integer,String, Float>>> genderWiseTx = genderRdd.mapToPair(new PairFunction<CassandraRow, Integer, Tuple4<Long, Integer,String, Float>>() {
+
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Tuple2<Integer, Tuple4<Long, Integer,String, Float>> call(CassandraRow t) throws Exception {
+				return new Tuple2<Integer, Tuple4<Long, Integer,String, Float>>(t.getInt("year"), new Tuple4<Long, Integer,String, Float>(t.getLong("merchantid"), t.getInt("month"),t.getString("gender"), t.getFloat("amount")));
+			}
+		}).filter(new Function<Tuple2<Integer,Tuple4<Long, Integer,String, Float>>, Boolean>() {
+			
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Boolean call(Tuple2<Integer, Tuple4<Long, Integer,String, Float>> v1) throws Exception {
+				return merchantNameList.contains(v1._2()._1().longValue());
+			}
+		}).collect();
+		
+		System.out.println("genderWiseTx == "+genderWiseTx);
+		System.out.println();
 	}
 
 	// bank merchantid totalamount ordercount date segment
@@ -199,12 +225,7 @@ public class BankMerchantAggregationJob {
 					public Tuple4<Long, String, String, Float> call(
 							Tuple6<String, Long, Float, Long, String, String> v1) throws Exception {
 
-						Date txDate = sdf.parse(v1._5());
-						Calendar cal = Calendar.getInstance();
-						cal.setTime(txDate);
-
-						return new Tuple4<Long, String, String, Float>(v1._2(), v1._6(),
-								" Month " + ((cal.get(Calendar.MONTH) + 1)), v1._3());
+						return new Tuple4<Long, String, String, Float>(v1._2(), v1._6(), " Month " + v1._5(), v1._3());
 					}
 				}).groupBy(new Function<Tuple4<Long, String, String, Float>, Long>() {
 
@@ -291,8 +312,6 @@ public class BankMerchantAggregationJob {
 
 		// Top merchant transaction amount quarterly.
 		System.out.println("Top merchantSegmentTxAmountMonthly = " + merchantSegmentTxAmountMonthly.collect());
-		System.out.println();
-
 	}
 
 	private static List<String> topSegmentForMerchant(final Integer topSegmentCount,
@@ -393,12 +412,7 @@ public class BankMerchantAggregationJob {
 					public Tuple3<Long, String, Float> call(Tuple6<String, Long, Float, Long, String, String> v1)
 							throws Exception {
 
-						Date txDate = sdf.parse(v1._5());
-						Calendar cal = Calendar.getInstance();
-						cal.setTime(txDate);
-
-						return new Tuple3<Long, String, Float>(v1._2(),
-								" Quarter " + ((cal.get(Calendar.MONTH) / 3) + 1), v1._3());
+						return new Tuple3<Long, String, Float>(v1._2(), " Quarter " + (v1._5()), v1._3());
 					}
 				}).groupBy(new Function<Tuple3<Long, String, Float>, Long>() {
 

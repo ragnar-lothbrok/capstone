@@ -8,7 +8,6 @@ public class BankMerchantTransaction implements Serializable {
 
 	private Integer year;
 	private Integer month;
-	private String date;
 	private String bank;
 	private Long merchantid;
 	private float totalamount;
@@ -37,14 +36,6 @@ public class BankMerchantTransaction implements Serializable {
 
 	public void setSegment(String segment) {
 		this.segment = segment;
-	}
-
-	public String getDate() {
-		return date;
-	}
-
-	public void setDate(String date) {
-		this.date = date;
 	}
 
 	public String getBank() {
@@ -79,10 +70,9 @@ public class BankMerchantTransaction implements Serializable {
 		this.ordercount = ordercount;
 	}
 
-	public BankMerchantTransaction(String date, String bank, Long merchantid, float totalamount, Long orderCount,
+	public BankMerchantTransaction(String bank, Long merchantid, float totalamount, Long orderCount,
 			String segment, Integer year, Integer month) {
 		super();
-		this.date = date;
 		this.bank = bank;
 		this.merchantid = merchantid;
 		this.totalamount = totalamount;
