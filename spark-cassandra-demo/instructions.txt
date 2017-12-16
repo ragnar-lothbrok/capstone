@@ -124,8 +124,11 @@ CREATE TABLE bank_total_transaction (
     PRIMARY KEY ((date,bank),totalAmount)
 );
 
+cd /tmp/capstone/capstone
 
 mvn clean package
+
+cd /usr/local/spark/bin
 
 
 spark-submit --class com.edureka.capstone.jobs.BankMerchantAggregationJob /tmp/capstone/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
