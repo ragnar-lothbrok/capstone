@@ -56,6 +56,8 @@ public class SparkStreamingMerchantJob {
 					record.get("taxRegNum").toString(), record.get("description").toString(),
 					Long.parseLong(record.get("startDate").toString()),
 					Integer.parseInt(record.get("merchantType").toString()), record.get("mobileNumber").toString());
+			
+			System.out.println("merchant = "+merchant);
 
 			List<Merchant> merchantList = Arrays.asList(merchant);
 
