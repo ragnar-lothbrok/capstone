@@ -42,6 +42,9 @@ public class SparkStreamingMerchantJob {
 
 		@Override
 		public void call(Tuple2<String, String> arg0) throws Exception {
+			
+			System.out.println("tuple details = "+arg0._1());
+			System.out.println("tuple value details = "+arg0._2());
 			Schema.Parser parser = new Schema.Parser();
 			Schema schema = parser.parse(FileProperties.MERCHANT_AVRO);
 			Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
