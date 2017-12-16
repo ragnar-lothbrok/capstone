@@ -27,10 +27,10 @@ public class FileProperties {
 
 		properties.put("topxmerchants", 4);
 		
-//		properties.put("auto.offset.reset", "largest");
-		properties.put("auto.offset.reset", "smallest");
-//		properties.put("group.id", "groupid");
-//		properties.put("enable.auto.commit", "true");
+		properties.put("auto.offset.reset", "largest");
+//		properties.put("auto.offset.reset", "smallest");
+		properties.put("group.id", "groupid");
+		properties.put("enable.auto.commit", "true");
 
 		properties.put("topmerchantcount", 5);
 		properties.put("topSegmentCount", 5);
