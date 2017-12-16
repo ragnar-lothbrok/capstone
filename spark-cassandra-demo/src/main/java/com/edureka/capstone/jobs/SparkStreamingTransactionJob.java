@@ -192,6 +192,11 @@ public class SparkStreamingTransactionJob {
 		conf.setAppName(SparkStreamingCardJob.class.getName());
 		conf.set("hadoop.home.dir", "/");
 
+		if(prop.get("spark.cassandra.auth.username") != null) {
+			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
+			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
+		}
+		
 		ssc = new JavaStreamingContext(conf, new Duration(2000));
 
 		Map<String, String> kafkaParams = new HashMap<>();

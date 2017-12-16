@@ -73,6 +73,10 @@ public class SparkStreamingCustomerJob {
 		}
 		conf.setAppName(SparkStreamingCustomerJob.class.getName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
+		if(prop.get("spark.cassandra.auth.username") != null) {
+			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
+			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
+		}
 		conf.setAppName(SparkStreamingCardJob.class.getName());
 		conf.set("hadoop.home.dir", "/");
 
