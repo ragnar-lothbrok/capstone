@@ -14,7 +14,7 @@ bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 -
 
 Publishing Data from Command Line :
 
-bin/kafka-console-producer.sh --broker-list localhost:9092 --topic product_topic
+bin/kafka-console-producer.sh --broker-list localhost:9092 --topic transaction_topic
 
 Consumer Side : 
 bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic transaction_topic --from-beginning
