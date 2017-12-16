@@ -21,7 +21,7 @@ public class MerchantDto {
 	@JsonProperty("mobileNumber")
 	private Integer mobileNumber;
 	@JsonProperty("startDate")
-	private Integer startDate;
+	private Long startDate;
 	@JsonProperty("email")
 	private String email;
 	@JsonProperty("address")
@@ -74,12 +74,12 @@ public class MerchantDto {
 	}
 
 	@JsonProperty("startDate")
-	public Integer getStartDate() {
+	public Long getStartDate() {
 		return startDate;
 	}
 
 	@JsonProperty("startDate")
-	public void setStartDate(Integer startDate) {
+	public void setStartDate(Long startDate) {
 		this.startDate = startDate;
 	}
 
