@@ -63,12 +63,6 @@
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-streaming-kafka_2.11</artifactId>
 			<version>1.6.2</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.apache.kafka</groupId>
-					<artifactId>kafka-clients</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 
 		<dependency>

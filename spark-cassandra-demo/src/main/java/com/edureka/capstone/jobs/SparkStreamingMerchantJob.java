@@ -32,7 +32,7 @@ import org.apache.spark.streaming.Duration;
 public class SparkStreamingMerchantJob {
 
 	private static JavaStreamingContext ssc;
-	
+
 	private static Gson gson = new Gson();
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
@@ -42,20 +42,17 @@ public class SparkStreamingMerchantJob {
 		@Override
 		public void call(Tuple2<String, String> arg0) throws Exception {
 
-			
 			System.out.println("========" + arg0._2());
-			
-			MerchantDto merchantDto = gson.fromJson( arg0._2(), MerchantDto.class);
-			
+
+			MerchantDto merchantDto = gson.fromJson(arg0._2(), MerchantDto.class);
+
 			System.out.println("MerchantDto = " + merchantDto);
 
-			Merchant merchant = new Merchant(merchantDto.getMerchantId().longValue(),
-					merchantDto.getMerchantName(), merchantDto.getEmail(),
-					merchantDto.getAddress(), merchantDto.getState(), merchantDto.getCountry(),
-					merchantDto.getPincode().longValue(), merchantDto.getSegment(),
-					merchantDto.getTaxRegNum(), merchantDto.getDescription(),
-					merchantDto.getStartDate().longValue(),
-					merchantDto.getMerchantType(), merchantDto.getMobileNumber().toString());
+			Merchant merchant = new Merchant(merchantDto.getMerchantId().longValue(), merchantDto.getMerchantName(),
+					merchantDto.getEmail(), merchantDto.getAddress(), merchantDto.getState(), merchantDto.getCountry(),
+					merchantDto.getPincode().longValue(), merchantDto.getSegment(), merchantDto.getTaxRegNum(),
+					merchantDto.getDescription(), merchantDto.getStartDate().longValue(), merchantDto.getMerchantType(),
+					merchantDto.getMobileNumber().toString());
 
 			System.out.println("merchant = " + merchant);
 
@@ -70,7 +67,7 @@ public class SparkStreamingMerchantJob {
 	public static void main(String[] args) throws InterruptedException {
 
 		try {
-			
+
 			Properties prop = FileProperties.properties;
 
 			SparkConf conf = null;
