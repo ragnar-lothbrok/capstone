@@ -26,20 +26,8 @@
 		<!-- KAFKA => version is important -->
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
-			<artifactId>kafka-clients</artifactId>
-			<version>0.10.1.0</version>
-		</dependency>
-		<!-- KAFKA => version is important -->
-		<dependency>
-			<groupId>org.apache.kafka</groupId>
 			<artifactId>kafka_2.11</artifactId>
-			<version>0.10.1.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.apache.kafka</groupId>
-					<artifactId>kafka-clients</artifactId>
-				</exclusion>
-			</exclusions>
+			<version>0.8.2.1</version>
 		</dependency>
 
 
