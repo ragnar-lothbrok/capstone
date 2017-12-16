@@ -1,6 +1,8 @@
 producer:
-    bootstrap: localhost:9092
-    brokers: localhost:9092
+#    bootstrap: localhost:9092
+#    brokers: localhost:9092
+    bootstrap: 20.0.31.78:9092,20.0.32.147:9092,20.0.31.127:9092
+    brokers: 20.0.31.78:9092,20.0.32.147:9092,20.0.31.127:9092
     acks: all
     retries: 3
     transactionTopic: 
