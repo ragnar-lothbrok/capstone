@@ -67,6 +67,9 @@ public class SparkStreamingMerchantJob {
 				System.out.println("merchant = " + merchant);
 
 				List<Merchant> merchantList = Arrays.asList(merchant);
+				
+				LOGGER.info("merchantList = {} ",merchant);
+				System.out.println("merchantList = "+merchant);
 
 				JavaRDD<Merchant> newRDD = ssc.sparkContext().parallelize(merchantList);
 
