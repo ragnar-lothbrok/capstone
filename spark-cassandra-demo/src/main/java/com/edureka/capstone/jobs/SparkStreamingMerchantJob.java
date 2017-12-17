@@ -3,6 +3,7 @@ package com.edureka.capstone.jobs;
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.javaFunctions;
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
 
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,8 +12,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -25,8 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import com.edureka.capstone.FileProperties;
 import com.edureka.capstone.Merchant;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
 
 import kafka.serializer.StringDecoder;
 import scala.Tuple2;
@@ -36,6 +33,10 @@ import org.apache.spark.streaming.Duration;
 public class SparkStreamingMerchantJob {
 	
 	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingMerchantJob.class);
+	
+	private static SimpleDateFormat sdf = new SimpleDateFormat("mm/dd/yy");
+	
+	private static SimpleDateFormat sdf1 = new SimpleDateFormat("mm/dd/yyyy");
 
 	private static JavaStreamingContext ssc;
 
@@ -44,27 +45,21 @@ public class SparkStreamingMerchantJob {
 		private static final long serialVersionUID = 1L;
 
 		@Override
-		public void call(Tuple2<String, String> arg0) {
+		public void call(Tuple2<String, String> arg0) throws Exception {
 
 			try {
-				System.out.println("tuple details = " + arg0._1());
 				System.out.println("tuple value details = " + arg0._2());
-				LOGGER.info("tuple details = {} " , arg0._1());
-				LOGGER.info("tuple value details = {} " , arg0._2());
-				Schema.Parser parser = new Schema.Parser();
-				Schema schema = parser.parse(FileProperties.MERCHANT_AVRO);
-				Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
-				GenericRecord record = recordInjection.invert(arg0._2).get();
+				String split[] = arg0._2().split(",");
 				
-				LOGGER.error("record = {} ",record);
+				LOGGER.error("record = {} ",arg0._2());
 
-				Merchant merchant = new Merchant(Long.parseLong(record.get("merchantId").toString()),
-						record.get("merchantName").toString(), record.get("email").toString(),
-						record.get("address").toString(), record.get("state").toString(),
-						record.get("country").toString(), Long.parseLong(record.get("pincode").toString()),
-						record.get("segment").toString(), record.get("taxRegNum").toString(),
-						record.get("description").toString(), Long.parseLong(record.get("startDate").toString()),
-						Integer.parseInt(record.get("merchantType").toString()), record.get("mobileNumber").toString());
+				Merchant merchant = new Merchant(Long.parseLong(split[0]),
+						split[1], split[4].trim(),
+						split[5].trim(), split[6].trim(),
+						split[7].trim(), Long.parseLong(split[8].trim()),
+						split[10].trim(), split[11].trim(),
+						split[12].trim(), sdf1.parse(split[3]).getTime(),
+						Integer.parseInt(split[9].trim()), split[2].trim());
 
 				LOGGER.error("merchant = {} " , merchant);
 
