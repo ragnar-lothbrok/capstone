@@ -20,6 +20,8 @@ import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.edureka.capstone.FileProperties;
 import com.edureka.capstone.Merchant;
@@ -32,6 +34,8 @@ import scala.Tuple2;
 import org.apache.spark.streaming.Duration;
 
 public class SparkStreamingMerchantJob {
+	
+	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingMerchantJob.class);
 
 	private static JavaStreamingContext ssc;
 
@@ -45,6 +49,8 @@ public class SparkStreamingMerchantJob {
 			try {
 				System.out.println("tuple details = " + arg0._1());
 				System.out.println("tuple value details = " + arg0._2());
+				LOGGER.info("tuple details = {} " , arg0._1());
+				LOGGER.info("tuple value details = {} " , arg0._2());
 				Schema.Parser parser = new Schema.Parser();
 				Schema schema = parser.parse(FileProperties.MERCHANT_AVRO);
 				Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
@@ -67,12 +73,13 @@ public class SparkStreamingMerchantJob {
 				javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class)).saveToCassandra();
 			} catch (Exception e) {
 				System.out.println("Exception occured while parsing  " + e.getMessage());
-				e.printStackTrace();
+				LOGGER.error("Exception occured while parsing = {} " , e.getMessage());
+				throw e;
 			}
 		}
 	};
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		try {
 			Properties prop = FileProperties.properties;
 
@@ -120,7 +127,8 @@ public class SparkStreamingMerchantJob {
 			ssc.awaitTermination();
 		} catch (Exception e) {
 			System.out.println("Exception occured while starting  " + e.getMessage());
-			e.printStackTrace();
+			LOGGER.error("Exception occured while parsing = {} " , e.getMessage());
+			throw e;
 		}
 
 	}
