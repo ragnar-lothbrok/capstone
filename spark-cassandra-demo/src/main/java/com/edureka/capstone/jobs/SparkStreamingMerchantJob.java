@@ -55,6 +55,8 @@ public class SparkStreamingMerchantJob {
 				Schema schema = parser.parse(FileProperties.MERCHANT_AVRO);
 				Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
 				GenericRecord record = recordInjection.invert(arg0._2).get();
+				
+				LOGGER.error("record = {} ",record);
 
 				Merchant merchant = new Merchant(Long.parseLong(record.get("merchantId").toString()),
 						record.get("merchantName").toString(), record.get("email").toString(),
@@ -64,11 +66,10 @@ public class SparkStreamingMerchantJob {
 						record.get("description").toString(), Long.parseLong(record.get("startDate").toString()),
 						Integer.parseInt(record.get("merchantType").toString()), record.get("mobileNumber").toString());
 
-				System.out.println("merchant = " + merchant);
+				LOGGER.error("merchant = {} " , merchant);
 
 				List<Merchant> merchantList = Arrays.asList(merchant);
 				
-				LOGGER.info("merchantList = {} ",merchant);
 				System.out.println("merchantList = "+merchant);
 
 				JavaRDD<Merchant> newRDD = ssc.sparkContext().parallelize(merchantList);
