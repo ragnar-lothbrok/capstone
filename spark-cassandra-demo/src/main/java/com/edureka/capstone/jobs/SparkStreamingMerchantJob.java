@@ -32,13 +32,13 @@ import scala.Tuple2;
 import org.apache.spark.streaming.Duration;
 
 public class SparkStreamingMerchantJob {
-	
+
 	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingMerchantJob.class);
-	
+
 	private static SimpleDateFormat sdf1 = new SimpleDateFormat("mm/dd/yyyy");
 
 	private static JavaStreamingContext ssc;
-	
+
 	private static JavaSparkContext jsc;
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
@@ -51,32 +51,30 @@ public class SparkStreamingMerchantJob {
 			try {
 				System.out.println("tuple value details = " + arg0._2());
 				String split[] = arg0._2().split(",");
-				
-				LOGGER.error("record = {} ",arg0._2());
 
-				Merchant merchant = new Merchant(Long.parseLong(split[0]),
-						split[1], split[4].trim(),
-						split[5].trim(), split[6].trim(),
-						split[7].trim(), Long.parseLong(split[8].trim()),
-						split[10].trim(), split[11].trim(),
-						split[12].trim(), sdf1.parse(split[3]).getTime(),
+				LOGGER.error("record = {} ", arg0._2());
+
+				Merchant merchant = new Merchant(Long.parseLong(split[0]), split[1], split[4].trim(), split[5].trim(),
+						split[6].trim(), split[7].trim(), Long.parseLong(split[8].trim()), split[10].trim(),
+						split[11].trim(), split[12].trim(), sdf1.parse(split[3]).getTime(),
 						Integer.parseInt(split[9].trim()), split[2].trim());
 
-				LOGGER.error("merchant = {} " , merchant);
+				LOGGER.error("merchant = {} ", merchant);
 
 				List<Merchant> merchantList = Arrays.asList(merchant);
-				
-				LOGGER.error("merchantList = "+merchantList);
 
-				if(merchantList != null & merchantList.size() > 0 && jsc != null) {
+				LOGGER.error("merchantList = " + merchantList);
+
+				if (merchantList != null & merchantList.size() > 0 && jsc != null) {
 					JavaRDD<Merchant> newRDD = jsc.parallelize(merchantList);
-					
-					if(!newRDD.isEmpty())
-						javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class)).saveToCassandra();
+
+					if (!newRDD.isEmpty())
+						javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class))
+								.saveToCassandra();
 				}
 			} catch (Exception e) {
 				System.out.println("Exception occured while parsing  " + e.getMessage());
-				LOGGER.error("Exception occured while parsing = {} " , e.getMessage());
+				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
 				throw e;
 			}
 		}
@@ -100,9 +98,9 @@ public class SparkStreamingMerchantJob {
 				conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
 			}
 
-			ssc = new JavaStreamingContext(conf, new Duration(2000));
-			
-			jsc = ssc.sparkContext();
+			jsc = new JavaSparkContext(conf);
+
+			ssc = new JavaStreamingContext(jsc, new Duration(2000));
 
 			Map<String, String> kafkaParams = new HashMap<>();
 
@@ -122,7 +120,7 @@ public class SparkStreamingMerchantJob {
 
 				@Override
 				public void call(JavaPairRDD<String, String> arg0) throws Exception {
-					if(!arg0.isEmpty())
+					if (!arg0.isEmpty())
 						arg0.foreach(mapFunc);
 				}
 			};
@@ -133,7 +131,7 @@ public class SparkStreamingMerchantJob {
 			ssc.awaitTermination();
 		} catch (Exception e) {
 			System.out.println("Exception occured while starting  " + e.getMessage());
-			LOGGER.error("Exception occured while parsing = {} " , e.getMessage());
+			LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
 			throw e;
 		}
 
