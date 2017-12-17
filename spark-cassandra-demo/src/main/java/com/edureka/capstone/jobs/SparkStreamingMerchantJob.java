@@ -65,11 +65,14 @@ public class SparkStreamingMerchantJob {
 
 				List<Merchant> merchantList = Arrays.asList(merchant);
 				
-				System.out.println("merchantList = "+merchant);
+				LOGGER.error("merchantList = "+merchantList);
 
-				JavaRDD<Merchant> newRDD = ssc.sparkContext().parallelize(merchantList);
-
-				javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class)).saveToCassandra();
+				if(merchantList != null & merchantList.size() > 0) {
+					JavaRDD<Merchant> newRDD = ssc.sparkContext().parallelize(merchantList);
+					
+					if(!newRDD.isEmpty())
+						javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class)).saveToCassandra();
+				}
 			} catch (Exception e) {
 				System.out.println("Exception occured while parsing  " + e.getMessage());
 				LOGGER.error("Exception occured while parsing = {} " , e.getMessage());
