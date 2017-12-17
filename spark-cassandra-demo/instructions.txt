@@ -145,3 +145,11 @@ cd /usr/local/spark/bin
 bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic merchant_topic --from-beginning
 
 //http://msvaljek.blogspot.in/2015/12/stream-processing-with-spring-kafka_13.html
+
+https://archive.apache.org/dist/spark/spark-2.1.0/spark-2.1.0-bin-hadoop2.7.tgz
+
+https://archive.apache.org/dist/kafka/0.8.2.1/kafka_2.11-0.8.2.1.tgz
+
+spark-submit  --class com.edureka.capstone.jobs.SparkStreamingMerchantJob /Users/raghugupta/Documents/gitrepo/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+
+spark-submit  --class com.edureka.capstone.jobs.SparkStreamingCustomerJob /Users/raghugupta/Documents/gitrepo/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar 

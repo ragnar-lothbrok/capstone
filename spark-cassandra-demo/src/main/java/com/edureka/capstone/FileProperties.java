@@ -16,8 +16,8 @@ public class FileProperties {
 			properties.put("spark.cassandra.auth.username", "edureka_339659");
 			properties.put("spark.cassandra.auth.password", "edureka_3396594kw6i");
 			properties.put("localmode", false);
-//			properties.put("metadata.broker.list", "20.0.31.78:9092,20.0.32.147:9092,20.0.31.127:9092");
-			properties.put("metadata.broker.list", "20.0.41.93:9092");
+			properties.put("metadata.broker.list", "20.0.31.78:9092,20.0.32.147:9092,20.0.31.127:9092");
+//			properties.put("metadata.broker.list", "20.0.41.93:9092");
 		} else {
 			properties.put("com.smcc.app.cassandra.host", "localhost");
 			properties.put("com.smcc.app.cassandra.port", "9042");

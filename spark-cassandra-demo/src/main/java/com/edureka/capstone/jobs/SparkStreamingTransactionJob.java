@@ -64,8 +64,8 @@ public class SparkStreamingTransactionJob {
 			Calendar cal = Calendar.getInstance();
 			cal.setTimeInMillis(transaction.getTimestamp());
 
-			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(transaction))).writerBuilder("capstone", "transaction", mapToRow(Transaction.class))
-					.saveToCassandra();
+			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(transaction)))
+					.writerBuilder("capstone", "transaction", mapToRow(Transaction.class)).saveToCassandra();
 
 			CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(ssc.sparkContext())
 					.cassandraTable("capstone", "bank_by_customer")
@@ -162,8 +162,9 @@ public class SparkStreamingTransactionJob {
 
 			CassandraTableScanJavaRDD<CassandraRow> merchantCustomerGenderDetails = javaFunctions(ssc.sparkContext())
 					.cassandraTable("capstone", "merchant_gender_transaction")
-					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH) + " and merchantid="
-							+ bankMerchantTransaction.getMerchantid() + " and gender='" + gender + "'");
+					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH)
+							+ " and merchantid=" + bankMerchantTransaction.getMerchantid() + " and gender='" + gender
+							+ "'");
 			amount = 0f;
 			if (merchantCustomerGenderDetails.count() > 0) {
 				amount = merchantCustomerGenderDetails.first().getFloat("amount");
@@ -191,13 +192,13 @@ public class SparkStreamingTransactionJob {
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
 		conf.setAppName(SparkStreamingCardJob.class.getName());
 
-		if(prop.get("spark.cassandra.auth.username") != null) {
+		if (prop.get("spark.cassandra.auth.username") != null) {
 			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
 			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
-		}else {
+		} else {
 			conf.set("hadoop.home.dir", "/");
 		}
-		
+
 		ssc = new JavaStreamingContext(conf, new Duration(2000));
 
 		Map<String, String> kafkaParams = new HashMap<>();
@@ -218,7 +219,8 @@ public class SparkStreamingTransactionJob {
 
 			@Override
 			public void call(JavaPairRDD<String, String> arg0) throws Exception {
-				arg0.foreach(mapFunc);
+				if (!arg0.isEmpty())
+					arg0.foreach(mapFunc);
 			}
 		};
 

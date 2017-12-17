@@ -16,6 +16,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -34,6 +35,8 @@ import org.apache.spark.streaming.Duration;
 public class SparkStreamingCardJob {
 
 	private static JavaStreamingContext ssc;
+
+	private static JavaSparkContext jsc;
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
 
@@ -55,34 +58,37 @@ public class SparkStreamingCardJob {
 
 			List<CardDetails> cardDetailList = Arrays.asList(cardDetails);
 
-			JavaRDD<CardDetails> newRDD = ssc.sparkContext().parallelize(cardDetailList);
+			JavaRDD<CardDetails> newRDD = jsc.parallelize(cardDetailList);
 
-			javaFunctions(newRDD).writerBuilder("capstone", "carddetails", mapToRow(CardDetails.class))
-					.saveToCassandra();
+			if (!newRDD.isEmpty())
+				javaFunctions(newRDD).writerBuilder("capstone", "carddetails", mapToRow(CardDetails.class))
+				.saveToCassandra();
 		}
 	};
 
 	public static void main(String[] args) throws InterruptedException {
 
 		Properties prop = FileProperties.properties;
-		
-		SparkConf conf  = null;
-		if(Boolean.parseBoolean(prop.get("localmode").toString())) {
+
+		SparkConf conf = null;
+		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
 			conf = new SparkConf().setMaster("local[*]");
-		}else {
+		} else {
 			conf = new SparkConf();
 		}
 		conf.setAppName(BankMerchantAggregationJob.class.getName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
-		if(prop.get("spark.cassandra.auth.username") != null) {
+		if (prop.get("spark.cassandra.auth.username") != null) {
 			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
 			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
-		}else {
+		} else {
 			conf.set("hadoop.home.dir", "/");
 		}
 		conf.setAppName(SparkStreamingCardJob.class.getName());
 
-		ssc = new JavaStreamingContext(conf, new Duration(2000));
+		jsc = new JavaSparkContext(conf);
+
+		ssc = new JavaStreamingContext(jsc, new Duration(2000));
 
 		Map<String, String> kafkaParams = new HashMap<>();
 
@@ -90,12 +96,11 @@ public class SparkStreamingCardJob {
 		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
 		kafkaParams.put("group.id", prop.get("group.id").toString());
 		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
-		
+
 		Set<String> topics = Collections.singleton("card_topic");
 
 		JavaPairInputDStream<String, String> directKafkaStream = KafkaUtils.createDirectStream(ssc, String.class,
 				String.class, StringDecoder.class, StringDecoder.class, kafkaParams, topics);
-
 
 		VoidFunction<JavaPairRDD<String, String>> iterateFunc = new VoidFunction<JavaPairRDD<String, String>>() {
 
@@ -103,7 +108,8 @@ public class SparkStreamingCardJob {
 
 			@Override
 			public void call(JavaPairRDD<String, String> arg0) throws Exception {
-				arg0.foreach(mapFunc);
+				if (!arg0.isEmpty())
+					arg0.foreach(mapFunc);
 			}
 		};
 
