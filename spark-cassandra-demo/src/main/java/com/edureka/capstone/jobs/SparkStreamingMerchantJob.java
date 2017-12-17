@@ -117,7 +117,8 @@ public class SparkStreamingMerchantJob {
 
 				@Override
 				public void call(JavaPairRDD<String, String> arg0) throws Exception {
-					arg0.foreach(mapFunc);
+					if(!arg0.isEmpty())
+						arg0.foreach(mapFunc);
 				}
 			};
 
