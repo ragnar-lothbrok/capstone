@@ -15,6 +15,7 @@ import java.util.Set;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -34,11 +35,11 @@ public class SparkStreamingMerchantJob {
 	
 	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingMerchantJob.class);
 	
-	private static SimpleDateFormat sdf = new SimpleDateFormat("mm/dd/yy");
-	
 	private static SimpleDateFormat sdf1 = new SimpleDateFormat("mm/dd/yyyy");
 
 	private static JavaStreamingContext ssc;
+	
+	private static JavaSparkContext jsc;
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
 
@@ -67,8 +68,8 @@ public class SparkStreamingMerchantJob {
 				
 				LOGGER.error("merchantList = "+merchantList);
 
-				if(merchantList != null & merchantList.size() > 0) {
-					JavaRDD<Merchant> newRDD = ssc.sparkContext().parallelize(merchantList);
+				if(merchantList != null & merchantList.size() > 0 && jsc != null) {
+					JavaRDD<Merchant> newRDD = jsc.parallelize(merchantList);
 					
 					if(!newRDD.isEmpty())
 						javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class)).saveToCassandra();
@@ -100,6 +101,8 @@ public class SparkStreamingMerchantJob {
 			}
 
 			ssc = new JavaStreamingContext(conf, new Duration(2000));
+			
+			jsc = ssc.sparkContext();
 
 			Map<String, String> kafkaParams = new HashMap<>();
 
