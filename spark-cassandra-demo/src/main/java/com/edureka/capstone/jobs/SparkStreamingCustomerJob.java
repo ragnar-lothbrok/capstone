@@ -25,6 +25,8 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.spark.connector.japi.CassandraRow;
+import com.datastax.spark.connector.japi.rdd.CassandraTableScanJavaRDD;
 import com.edureka.capstone.Customer;
 import com.edureka.capstone.FileProperties;
 import com.twitter.bijection.Injection;
@@ -89,18 +91,29 @@ public class SparkStreamingCustomerJob {
 				List<Customer> customerList = Arrays.asList(customer);
 
 				LOGGER.error("Customer List = {} jsc = {} ", customerList,
-						JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)));
+						JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()));
+				
+				CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()))
+						.cassandraTable("capstone", "customer").where("customerid = 11111");
+				String gender = null;
+				if (customerGenderDetails.count() > 0) {
+					gender = customerGenderDetails.first().getString("gender");
+				}
+				
+				LOGGER.info("GENDER = {} ",gender);
 
-				JavaRDD<Customer> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf))
+				JavaRDD<Customer> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate())
 						.parallelize(customerList);
 				
-				LOGGER.error("Is RDD EMPTY = {} ",newRDD.isEmpty());
-
-				if (!newRDD.isEmpty()) {
+				LOGGER.info("newRDD = {} ",newRDD);
+//				
+//				LOGGER.error("Is RDD EMPTY = {} ",newRDD.isEmpty());
+//
+//				if (!newRDD.isEmpty()) {
 					javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
 					.saveToCassandra();
 					LOGGER.error("SAVED TO CASSANDRA");
-				}
+//				}
 			} catch (Exception e) {
 				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
 				throw e;
