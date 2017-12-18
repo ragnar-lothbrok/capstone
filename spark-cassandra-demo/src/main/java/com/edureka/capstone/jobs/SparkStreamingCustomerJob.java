@@ -93,10 +93,14 @@ public class SparkStreamingCustomerJob {
 
 				JavaRDD<Customer> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf))
 						.parallelize(customerList);
+				
+				LOGGER.error("Is RDD EMPTY = {} ",newRDD.isEmpty());
 
-				if (!newRDD.isEmpty())
+				if (!newRDD.isEmpty()) {
 					javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
-							.saveToCassandra();
+					.saveToCassandra();
+					LOGGER.error("SAVED TO CASSANDRA");
+				}
 			} catch (Exception e) {
 				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
 				throw e;
