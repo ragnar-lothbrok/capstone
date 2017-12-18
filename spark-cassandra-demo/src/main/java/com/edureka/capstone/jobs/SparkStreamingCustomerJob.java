@@ -47,30 +47,37 @@ public class SparkStreamingCustomerJob {
 		private static final long serialVersionUID = 1L;
 
 		@Override
-		public void call(Tuple2<String, String> arg0) throws Exception {
-			Schema.Parser parser = new Schema.Parser();
-			Schema schema = parser.parse(FileProperties.CUSTOMER_AVRO);
-			Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
-			GenericRecord record = recordInjection.invert(arg0._2).get();
+		public void call(Tuple2<String, String> arg0) {
+			try {
+				Schema.Parser parser = new Schema.Parser();
+				Schema schema = parser.parse(FileProperties.CUSTOMER_AVRO);
+				Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
+				GenericRecord record = recordInjection.invert(arg0._2).get();
 
-			Customer customer = new Customer(Long.parseLong(record.get("customerId").toString()),
-					record.get("customerName").toString(), record.get("mobileNumber").toString(),
-					record.get("gender").toString(), Long.parseLong(record.get("bithDate").toString()),
-					record.get("email").toString(), record.get("address").toString(), record.get("state").toString(),
-					record.get("country").toString(), Long.parseLong(record.get("pincode").toString()));
+				Customer customer = new Customer(Long.parseLong(record.get("customerId").toString()),
+						record.get("customerName").toString(), record.get("mobileNumber").toString(),
+						record.get("gender").toString(), Long.parseLong(record.get("bithDate").toString()),
+						record.get("email").toString(), record.get("address").toString(),
+						record.get("state").toString(), record.get("country").toString(),
+						Long.parseLong(record.get("pincode").toString()));
 
-			List<Customer> customerList = Arrays.asList(customer);
+				List<Customer> customerList = Arrays.asList(customer);
 
-			LOGGER.error("Customer List = {} jsc = {} ", customerList, jsc);
+				LOGGER.error("Customer List = {} jsc = {} ", customerList, jsc);
 
-			if (customerList.size() > 0) {
+				if (customerList.size() > 0 && jsc != null) {
 
-				JavaRDD<Customer> newRDD = jsc.parallelize(customerList);
+					JavaRDD<Customer> newRDD = jsc.parallelize(customerList);
 
-				if (!newRDD.isEmpty())
-					javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
-							.saveToCassandra();
+					if (!newRDD.isEmpty())
+						javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
+								.saveToCassandra();
+				}
+			} catch (Exception e) {
+				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
+				throw e;
 			}
+
 		}
 	};
 
