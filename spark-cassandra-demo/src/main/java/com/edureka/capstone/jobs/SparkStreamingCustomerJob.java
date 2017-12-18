@@ -21,6 +21,8 @@ import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.edureka.capstone.Customer;
 import com.edureka.capstone.FileProperties;
@@ -33,6 +35,8 @@ import scala.Tuple2;
 import org.apache.spark.streaming.Duration;
 
 public class SparkStreamingCustomerJob {
+
+	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingCustomerJob.class);
 
 	private static JavaStreamingContext ssc;
 
@@ -49,18 +53,24 @@ public class SparkStreamingCustomerJob {
 			Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
 			GenericRecord record = recordInjection.invert(arg0._2).get();
 
-			Customer Customer = new Customer(Long.parseLong(record.get("customerId").toString()),
+			Customer customer = new Customer(Long.parseLong(record.get("customerId").toString()),
 					record.get("customerName").toString(), record.get("mobileNumber").toString(),
 					record.get("gender").toString(), Long.parseLong(record.get("bithDate").toString()),
 					record.get("email").toString(), record.get("address").toString(), record.get("state").toString(),
 					record.get("country").toString(), Long.parseLong(record.get("pincode").toString()));
 
-			List<Customer> customer = Arrays.asList(Customer);
+			List<Customer> customerList = Arrays.asList(customer);
 
-			JavaRDD<Customer> newRDD = jsc.parallelize(customer);
+			LOGGER.error("Customer List = {} jsc = {} ", customerList, jsc);
 
-			if (!newRDD.isEmpty())
-				javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class)).saveToCassandra();
+			if (customerList.size() > 0) {
+
+				JavaRDD<Customer> newRDD = jsc.parallelize(customerList);
+
+				if (!newRDD.isEmpty())
+					javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
+							.saveToCassandra();
+			}
 		}
 	};
 
