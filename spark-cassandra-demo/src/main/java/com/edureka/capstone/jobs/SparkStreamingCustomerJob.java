@@ -14,6 +14,7 @@ import java.util.Set;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -101,7 +102,7 @@ public class SparkStreamingCustomerJob {
 		}
 		conf.setAppName(SparkStreamingCardJob.class.getName());
 
-		jsc = new JavaSparkContext(conf);
+		jsc = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf));
 
 		ssc = new JavaStreamingContext(jsc, new Duration(2000));
 
