@@ -1,6 +1,6 @@
 producer:
-#    bootstrap: localhost:9092
-#    brokers: localhost:9092
+#    bootstrap: 10.216.5.62:9092
+#    brokers: 10.216.5.62:9092
     bootstrap: 20.0.31.78:9092,20.0.32.147:9092,20.0.31.127:9092
     brokers: 20.0.31.78:9092,20.0.32.147:9092,20.0.31.127:9092
     acks: all
@@ -8,24 +8,20 @@ producer:
     transactionTopic: 
       topic: transaction_topic
       partitionCount: 1
-#      filePath: /Users/raghugupta/Documents/Capstone/transaction.csv
       filePath: /tmp/capstonefiles/transaction.csv
       avroSchemaPath: schema/transaction.avro
     merchantTopic: 
       topic: merchant_topic
       partitionCount: 1
-#      filePath: /Users/raghugupta/Documents/Capstone/merchant.csv
       filePath: /tmp/capstonefiles/merchant.csv
       avroSchemaPath: schema/merchant.avro
     cardTopic: 
       topic: card_topic
       partitionCount: 1
-#      filePath: /Users/raghugupta/Documents/Capstone/card.csv
       filePath: /tmp/capstonefiles/card.csv
       avroSchemaPath: schema/card.avro
     customerTopic: 
       topic: customer_topic
       partitionCount: 1
-#      filePath: /Users/raghugupta/Documents/Capstone/customer.csv
       filePath: /tmp/capstonefiles/customer.csv
       avroSchemaPath: schema/customer.avro

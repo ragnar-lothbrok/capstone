@@ -143,4 +143,12 @@ public class Merchant implements Serializable {
 		this.mobilenumber = mobilenumber;
 	}
 
+	@Override
+	public String toString() {
+		return "Merchant [merchantid=" + merchantid + ", merchantname=" + merchantname + ", email=" + email
+				+ ", address=" + address + ", state=" + state + ", country=" + country + ", pincode=" + pincode
+				+ ", segment=" + segment + ", taxregnum=" + taxregnum + ", description=" + description + ", startdate="
+				+ startdate + ", merchanttype=" + merchanttype + ", mobilenumber=" + mobilenumber + "]";
+	}
+
 }

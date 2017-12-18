@@ -9,7 +9,7 @@ public class FileProperties {
 	static {
 		properties = new Properties();
 
-		Boolean isEdurekaServer = true;
+		Boolean isEdurekaServer = false;
 		if (isEdurekaServer) {
 			properties.put("com.smcc.app.cassandra.host", "20.0.41.93");
 			properties.put("com.smcc.app.cassandra.port", "9042");
@@ -21,7 +21,7 @@ public class FileProperties {
 		} else {
 			properties.put("com.smcc.app.cassandra.host", "localhost");
 			properties.put("com.smcc.app.cassandra.port", "9042");
-			properties.put("metadata.broker.list", "192.168.0.15:9092");
+			properties.put("metadata.broker.list", "10.216.5.62:9092");
 			properties.put("localmode", true);
 		}
 
