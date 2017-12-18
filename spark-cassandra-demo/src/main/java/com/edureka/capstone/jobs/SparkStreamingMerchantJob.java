@@ -125,9 +125,6 @@ public class SparkStreamingMerchantJob {
 				public void call(JavaPairRDD<String, String> arg0) throws Exception {
 					if (!arg0.isEmpty())
 						arg0.foreach(mapFunc);
-					else {
-						arg0.foreach(mapFunc);
-					}
 				}
 			};
 
