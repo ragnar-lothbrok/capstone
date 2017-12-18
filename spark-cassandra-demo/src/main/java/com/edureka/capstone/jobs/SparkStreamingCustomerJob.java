@@ -39,9 +39,33 @@ public class SparkStreamingCustomerJob {
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingCustomerJob.class);
 
-	private static JavaStreamingContext ssc;
+	private static SparkConf conf = null;
 
-	private static JavaSparkContext jsc;
+	private static Map<String, String> kafkaParams = new HashMap<>();
+
+	static {
+		Properties prop = FileProperties.properties;
+		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
+			conf = new SparkConf().setMaster("local[*]");
+		} else {
+			conf = new SparkConf();
+		}
+		conf.setAppName(SparkStreamingCustomerJob.class.getName());
+		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
+		if (prop.get("spark.cassandra.auth.username") != null) {
+			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
+			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
+		} else {
+			conf.set("hadoop.home.dir", "/");
+		}
+		conf.setAppName(SparkStreamingCardJob.class.getName());
+
+		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
+		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
+		kafkaParams.put("group.id", prop.get("group.id").toString());
+		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+
+	}
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
 
@@ -64,16 +88,15 @@ public class SparkStreamingCustomerJob {
 
 				List<Customer> customerList = Arrays.asList(customer);
 
-				LOGGER.error("Customer List = {} jsc = {} ", customerList, jsc);
+				LOGGER.error("Customer List = {} jsc = {} ", customerList,
+						JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)));
 
-				if (customerList.size() > 0 && jsc != null) {
+				JavaRDD<Customer> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf))
+						.parallelize(customerList);
 
-					JavaRDD<Customer> newRDD = jsc.parallelize(customerList);
-
-					if (!newRDD.isEmpty())
-						javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
-								.saveToCassandra();
-				}
+				if (!newRDD.isEmpty())
+					javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
+							.saveToCassandra();
 			} catch (Exception e) {
 				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
 				throw e;
@@ -84,34 +107,8 @@ public class SparkStreamingCustomerJob {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		Properties prop = FileProperties.properties;
-
-		SparkConf conf = null;
-		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
-			conf = new SparkConf().setMaster("local[*]");
-		} else {
-			conf = new SparkConf();
-		}
-		conf.setAppName(SparkStreamingCustomerJob.class.getName());
-		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
-		if (prop.get("spark.cassandra.auth.username") != null) {
-			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
-			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
-		} else {
-			conf.set("hadoop.home.dir", "/");
-		}
-		conf.setAppName(SparkStreamingCardJob.class.getName());
-
-		jsc = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf));
-
-		ssc = new JavaStreamingContext(jsc, new Duration(2000));
-
-		Map<String, String> kafkaParams = new HashMap<>();
-
-		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
-		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
-		kafkaParams.put("group.id", prop.get("group.id").toString());
-		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+		JavaStreamingContext ssc = new JavaStreamingContext(
+				JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)), new Duration(2000));
 
 		Set<String> topics = Collections.singleton("customer_topic");
 
