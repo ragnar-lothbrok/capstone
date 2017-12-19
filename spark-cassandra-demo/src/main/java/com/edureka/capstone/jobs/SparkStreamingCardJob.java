@@ -14,6 +14,7 @@ import java.util.Set;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -34,9 +35,33 @@ import org.apache.spark.streaming.Duration;
 
 public class SparkStreamingCardJob {
 
-	private static JavaStreamingContext ssc;
+	private static SparkConf conf = null;
 
-	private static JavaSparkContext jsc;
+	private static Map<String, String> kafkaParams = new HashMap<>();
+
+	static {
+		Properties prop = FileProperties.properties;
+		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
+			conf = new SparkConf().setMaster("local[*]");
+		} else {
+			conf = new SparkConf();
+		}
+		conf.setAppName(SparkStreamingCustomerJob.class.getName());
+		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
+		if (prop.get("spark.cassandra.auth.username") != null) {
+			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
+			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
+		} else {
+			conf.set("hadoop.home.dir", "/");
+		}
+		conf.setAppName(SparkStreamingCardJob.class.getName());
+
+		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
+		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
+		kafkaParams.put("group.id", prop.get("group.id").toString());
+		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+
+	}
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
 
@@ -58,7 +83,7 @@ public class SparkStreamingCardJob {
 
 			List<CardDetails> cardDetailList = Arrays.asList(cardDetails);
 
-			JavaRDD<CardDetails> newRDD = jsc.parallelize(cardDetailList);
+			JavaRDD<CardDetails> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()).parallelize(cardDetailList);
 
 			if (!newRDD.isEmpty())
 				javaFunctions(newRDD).writerBuilder("capstone", "carddetails", mapToRow(CardDetails.class))
@@ -68,34 +93,8 @@ public class SparkStreamingCardJob {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		Properties prop = FileProperties.properties;
-
-		SparkConf conf = null;
-		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
-			conf = new SparkConf().setMaster("local[*]");
-		} else {
-			conf = new SparkConf();
-		}
-		conf.setAppName(BankMerchantAggregationJob.class.getName());
-		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
-		if (prop.get("spark.cassandra.auth.username") != null) {
-			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
-			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
-		} else {
-			conf.set("hadoop.home.dir", "/");
-		}
-		conf.setAppName(SparkStreamingCardJob.class.getName());
-
-		jsc = new JavaSparkContext(conf);
-
-		ssc = new JavaStreamingContext(jsc, new Duration(2000));
-
-		Map<String, String> kafkaParams = new HashMap<>();
-
-		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
-		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
-		kafkaParams.put("group.id", prop.get("group.id").toString());
-		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+		JavaStreamingContext ssc = new JavaStreamingContext(
+				JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)), new Duration(2000));
 
 		Set<String> topics = Collections.singleton("card_topic");
 

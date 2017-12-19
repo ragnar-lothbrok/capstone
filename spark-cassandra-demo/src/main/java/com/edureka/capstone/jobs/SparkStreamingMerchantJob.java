@@ -39,9 +39,33 @@ public class SparkStreamingMerchantJob {
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingMerchantJob.class);
 
-	private static JavaStreamingContext ssc;
+	private static SparkConf conf = null;
 
-	private static JavaSparkContext jsc;
+	private static Map<String, String> kafkaParams = new HashMap<>();
+
+	static {
+		Properties prop = FileProperties.properties;
+		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
+			conf = new SparkConf().setMaster("local[*]");
+		} else {
+			conf = new SparkConf();
+		}
+		conf.setAppName(SparkStreamingCustomerJob.class.getName());
+		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
+		if (prop.get("spark.cassandra.auth.username") != null) {
+			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
+			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
+		} else {
+			conf.set("hadoop.home.dir", "/");
+		}
+		conf.setAppName(SparkStreamingCardJob.class.getName());
+
+		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
+		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
+		kafkaParams.put("group.id", prop.get("group.id").toString());
+		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+
+	}
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
 
@@ -70,10 +94,11 @@ public class SparkStreamingMerchantJob {
 
 				LOGGER.info("merchantList = " + merchantList);
 
-				JavaRDD<Merchant> newRDD = jsc.parallelize(merchantList);
+				JavaRDD<Merchant> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate())
+						.parallelize(merchantList);
 
 				javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class)).saveToCassandra();
-				
+
 				LOGGER.info("INSERTED");
 			} catch (Exception e) {
 				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
@@ -84,32 +109,9 @@ public class SparkStreamingMerchantJob {
 
 	public static void main(String[] args) throws Exception {
 		try {
-			Properties prop = FileProperties.properties;
 
-			SparkConf conf = null;
-			if (Boolean.parseBoolean(prop.get("localmode").toString())) {
-				conf = new SparkConf().setMaster("local[*]");
-			} else {
-				conf = new SparkConf();
-			}
-			conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
-			conf.setAppName(SparkStreamingMerchantJob.class.getName());
-			conf.set("hadoop.home.dir", "/");
-			if (prop.get("spark.cassandra.auth.username") != null) {
-				conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
-				conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
-			}
-
-			jsc = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf));
-
-			ssc = new JavaStreamingContext(jsc, new Duration(2000));
-
-			Map<String, String> kafkaParams = new HashMap<>();
-
-			kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
-			kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
-			kafkaParams.put("group.id", prop.get("group.id").toString());
-			kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+			JavaStreamingContext ssc = new JavaStreamingContext(
+					JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)), new Duration(2000));
 
 			Set<String> topics = Collections.singleton("merchant_topic");
 

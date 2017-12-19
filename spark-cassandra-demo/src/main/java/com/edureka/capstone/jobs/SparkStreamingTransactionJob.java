@@ -15,7 +15,9 @@ import java.util.Set;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -40,8 +42,33 @@ import org.apache.spark.streaming.Duration;
 
 public class SparkStreamingTransactionJob {
 
-	private static JavaStreamingContext ssc;
+	private static SparkConf conf = null;
 
+	private static Map<String, String> kafkaParams = new HashMap<>();
+
+	static {
+		Properties prop = FileProperties.properties;
+		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
+			conf = new SparkConf().setMaster("local[*]");
+		} else {
+			conf = new SparkConf();
+		}
+		conf.setAppName(SparkStreamingCustomerJob.class.getName());
+		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
+		if (prop.get("spark.cassandra.auth.username") != null) {
+			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
+			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
+		} else {
+			conf.set("hadoop.home.dir", "/");
+		}
+		conf.setAppName(SparkStreamingCardJob.class.getName());
+
+		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
+		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
+		kafkaParams.put("group.id", prop.get("group.id").toString());
+		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+
+	}
 	static SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
 
 	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
@@ -64,10 +91,12 @@ public class SparkStreamingTransactionJob {
 			Calendar cal = Calendar.getInstance();
 			cal.setTimeInMillis(transaction.getTimestamp());
 
-			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(transaction)))
+			JavaSparkContext jsc = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate());
+
+			javaFunctions(jsc.parallelize(Arrays.asList(transaction)))
 					.writerBuilder("capstone", "transaction", mapToRow(Transaction.class)).saveToCassandra();
 
-			CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(ssc.sparkContext())
+			CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(jsc)
 					.cassandraTable("capstone", "bank_by_customer")
 					.where("customerid = " + transaction.getCustomerid());
 			String bank = null;
@@ -116,7 +145,7 @@ public class SparkStreamingTransactionJob {
 					transaction.getMerchantid(), transaction.getInvoiceamount(), 0l, transaction.getSegment(),
 					cal.get(Calendar.YEAR), cal.get(Calendar.MONTH));
 
-			CassandraTableScanJavaRDD<CassandraRow> bankMerchantDetails = javaFunctions(ssc.sparkContext())
+			CassandraTableScanJavaRDD<CassandraRow> bankMerchantDetails = javaFunctions(jsc)
 					.cassandraTable("capstone", "bank_merchant_transaction")
 					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH) + " and bank = '"
 							+ bankMerchantTransaction.getBank() + "' and merchantid="
@@ -133,23 +162,23 @@ public class SparkStreamingTransactionJob {
 			bankMerchantTransaction.setTotalamount(amount + bankMerchantTransaction.getTotalamount());
 			bankMerchantTransaction.setOrdercount(orderCount + 1);
 
-			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(bankMerchantTransaction)))
+			javaFunctions(jsc.parallelize(Arrays.asList(bankMerchantTransaction)))
 					.writerBuilder("capstone", "bank_merchant_transaction", mapToRow(BankMerchantTransaction.class))
 					.saveToCassandra();
 
-			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(customerTransactionCounter)))
+			javaFunctions(jsc.parallelize(Arrays.asList(customerTransactionCounter)))
 					.writerBuilder("capstone", "customer_transaction", mapToRow(CustomerTransactionCounter.class))
 					.saveToCassandra();
 
-			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(merchantTransactionCounter)))
+			javaFunctions(jsc.parallelize(Arrays.asList(merchantTransactionCounter)))
 					.writerBuilder("capstone", "merchant_transaction", mapToRow(MerchantTransactionCounter.class))
 					.saveToCassandra();
 
-			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(dailyTransactionCounter)))
+			javaFunctions(jsc.parallelize(Arrays.asList(dailyTransactionCounter)))
 					.writerBuilder("capstone", "daily_transaction", mapToRow(DailyTransactionCounter.class))
 					.saveToCassandra();
 
-			CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(ssc.sparkContext())
+			CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(jsc)
 					.cassandraTable("capstone", "customer").where("customerid = " + transaction.getCustomerid());
 			String gender = null;
 			if (customerGenderDetails.count() > 0) {
@@ -160,7 +189,7 @@ public class SparkStreamingTransactionJob {
 					bankMerchantTransaction.getYear(), bankMerchantTransaction.getMonth(),
 					bankMerchantTransaction.getMerchantid(), transaction.getInvoiceamount(), gender);
 
-			CassandraTableScanJavaRDD<CassandraRow> merchantCustomerGenderDetails = javaFunctions(ssc.sparkContext())
+			CassandraTableScanJavaRDD<CassandraRow> merchantCustomerGenderDetails = javaFunctions(jsc)
 					.cassandraTable("capstone", "merchant_gender_transaction")
 					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH)
 							+ " and merchantid=" + bankMerchantTransaction.getMerchantid() + " and gender='" + gender
@@ -171,7 +200,7 @@ public class SparkStreamingTransactionJob {
 			}
 			merchantGenderTransaction.setAmount(amount + merchantGenderTransaction.getAmount());
 
-			javaFunctions(ssc.sparkContext().parallelize(Arrays.asList(merchantGenderTransaction)))
+			javaFunctions(jsc.parallelize(Arrays.asList(merchantGenderTransaction)))
 					.writerBuilder("capstone", "merchant_gender_transaction", mapToRow(MerchantGenderTransaction.class))
 					.saveToCassandra();
 
@@ -180,33 +209,8 @@ public class SparkStreamingTransactionJob {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		Properties prop = FileProperties.properties;
-
-		SparkConf conf = null;
-		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
-			conf = new SparkConf().setMaster("local[*]");
-		} else {
-			conf = new SparkConf();
-		}
-		conf.setAppName(SparkStreamingTransactionJob.class.getName());
-		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
-		conf.setAppName(SparkStreamingCardJob.class.getName());
-
-		if (prop.get("spark.cassandra.auth.username") != null) {
-			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
-			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
-		} else {
-			conf.set("hadoop.home.dir", "/");
-		}
-
-		ssc = new JavaStreamingContext(conf, new Duration(2000));
-
-		Map<String, String> kafkaParams = new HashMap<>();
-
-		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
-		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
-		kafkaParams.put("group.id", prop.get("group.id").toString());
-		kafkaParams.put("enable.auto.commit", prop.get("enable.auto.commit").toString());
+		JavaStreamingContext ssc = new JavaStreamingContext(
+				JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)), new Duration(2000));
 
 		Set<String> topics = Collections.singleton("transaction_topic");
 

@@ -16,6 +16,7 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -61,7 +62,7 @@ public class BankMerchantAggregationJob {
 		}
 		conf.set("hadoop.home.dir", "/");
 
-		javaSparkContext = new JavaSparkContext(conf);
+		javaSparkContext = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf));
 
 		SparkContextJavaFunctions functions = CassandraJavaUtil.javaFunctions(javaSparkContext);
 		

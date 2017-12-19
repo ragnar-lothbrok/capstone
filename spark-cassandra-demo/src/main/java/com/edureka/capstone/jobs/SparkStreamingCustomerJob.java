@@ -45,6 +45,8 @@ public class SparkStreamingCustomerJob {
 
 	private static Map<String, String> kafkaParams = new HashMap<>();
 
+	private static JavaStreamingContext ssc = null;
+
 	static {
 		Properties prop = FileProperties.properties;
 		if (Boolean.parseBoolean(prop.get("localmode").toString())) {
@@ -92,28 +94,27 @@ public class SparkStreamingCustomerJob {
 
 				LOGGER.error("Customer List = {} jsc = {} ", customerList,
 						JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()));
-				
-				CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()))
-						.cassandraTable("capstone", "customer").where("customerid = 11111");
+
+				CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(
+						JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()))
+								.cassandraTable("capstone", "customer").where("customerid = 11111");
 				String gender = null;
 				if (customerGenderDetails.count() > 0) {
 					gender = customerGenderDetails.first().getString("gender");
 				}
-				
-				LOGGER.info("GENDER = {} ",gender);
 
-				JavaRDD<Customer> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate())
-						.parallelize(customerList);
-				
-				LOGGER.info("newRDD = {} ",newRDD);
-//				
-//				LOGGER.error("Is RDD EMPTY = {} ",newRDD.isEmpty());
-//
-//				if (!newRDD.isEmpty()) {
-					javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class))
-					.saveToCassandra();
-					LOGGER.error("SAVED TO CASSANDRA");
-//				}
+				LOGGER.info("GENDER = {} ", gender);
+
+				// JavaRDD<Customer> newRDD =
+				// JavaSparkContext.fromSparkContext(SparkContext.getOrCreate())
+				// .parallelize(customerList);
+
+				JavaRDD<Customer> newRDD = ssc.sparkContext().parallelize(customerList);
+
+				LOGGER.info("newRDD = {} ", newRDD);
+
+				javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class)).saveToCassandra();
+				LOGGER.error("SAVED TO CASSANDRA");
 			} catch (Exception e) {
 				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
 				throw e;
@@ -124,8 +125,8 @@ public class SparkStreamingCustomerJob {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		JavaStreamingContext ssc = new JavaStreamingContext(
-				JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)), new Duration(2000));
+		ssc = new JavaStreamingContext(JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)),
+				new Duration(2000));
 
 		Set<String> topics = Collections.singleton("customer_topic");
 
