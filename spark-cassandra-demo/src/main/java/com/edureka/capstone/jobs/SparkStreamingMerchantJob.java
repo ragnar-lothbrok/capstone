@@ -58,10 +58,10 @@ public class SparkStreamingMerchantJob {
 
 				Merchant merchant = new Merchant(Long.parseLong(record.get("merchantId").toString()),
 						record.get("merchantName").toString(), record.get("email").toString(),
-						record.get("address").toString(), record.get("state").toString(), record.get("country").toString(),
-						Long.parseLong(record.get("pincode").toString()), record.get("segment").toString(),
-						record.get("taxRegNum").toString(), record.get("description").toString(),
-						Long.parseLong(record.get("startDate").toString()),
+						record.get("address").toString(), record.get("state").toString(),
+						record.get("country").toString(), Long.parseLong(record.get("pincode").toString()),
+						record.get("segment").toString(), record.get("taxRegNum").toString(),
+						record.get("description").toString(), Long.parseLong(record.get("startDate").toString()),
 						Integer.parseInt(record.get("merchantType").toString()), record.get("mobileNumber").toString());
 
 				LOGGER.info("merchant = {} ", merchant);
@@ -70,13 +70,11 @@ public class SparkStreamingMerchantJob {
 
 				LOGGER.info("merchantList = " + merchantList);
 
-				if (merchantList != null & merchantList.size() > 0 && jsc != null) {
-					JavaRDD<Merchant> newRDD = jsc.parallelize(merchantList);
+				JavaRDD<Merchant> newRDD = jsc.parallelize(merchantList);
 
-					if (!newRDD.isEmpty())
-						javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class))
-								.saveToCassandra();
-				}
+				javaFunctions(newRDD).writerBuilder("capstone", "merchant", mapToRow(Merchant.class)).saveToCassandra();
+				
+				LOGGER.info("INSERTED");
 			} catch (Exception e) {
 				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
 				throw e;
