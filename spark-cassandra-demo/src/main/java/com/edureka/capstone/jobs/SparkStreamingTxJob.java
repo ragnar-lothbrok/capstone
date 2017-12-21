@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.edureka.capstone.FileProperties;
-import com.edureka.capstone.Transaction;
+import com.edureka.capstone.OrderTransaction;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 
@@ -77,7 +77,7 @@ public class SparkStreamingTxJob {
 		Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
 		GenericRecord record = recordInjection.invert(value).get();
 
-		Transaction transaction = new Transaction(record.get("txId").toString(),
+		OrderTransaction transaction = new OrderTransaction(record.get("txId").toString(),
 				Long.parseLong(record.get("customerId").toString()),
 				Long.parseLong(record.get("merchantId").toString()), record.get("status").toString(),
 				Long.parseLong(record.get("timestamp").toString()), record.get("invoiceNum").toString(),
@@ -85,13 +85,13 @@ public class SparkStreamingTxJob {
 
 		LOGGER.info("transaction = {} ", transaction);
 
-		List<Transaction> transactionList = Arrays.asList(transaction);
+		List<OrderTransaction> transactionList = Arrays.asList(transaction);
 
 		LOGGER.info("transactionList = " + transactionList);
 
-		JavaRDD<Transaction> newRDD = jsc.parallelize(transactionList);
+		JavaRDD<OrderTransaction> newRDD = jsc.parallelize(transactionList);
 
-		javaFunctions(newRDD).writerBuilder("capstone", "transaction", mapToRow(Transaction.class)).saveToCassandra();
+		javaFunctions(newRDD).writerBuilder("capstone", "order_transaction", mapToRow(OrderTransaction.class)).saveToCassandra();
 
 		LOGGER.info("INSERTED");
 	}
@@ -103,7 +103,7 @@ public class SparkStreamingTxJob {
 
 			ssc = new JavaStreamingContext(jsc, new Duration(1000));
 
-			Set<String> topics = Collections.singleton("transaction_topic");
+			Set<String> topics = Collections.singleton("transaction_top");
 
 			JavaPairInputDStream<String, String> directKafkaStream = KafkaUtils.createDirectStream(ssc, String.class,
 					String.class, StringDecoder.class, StringDecoder.class, kafkaParams, topics);

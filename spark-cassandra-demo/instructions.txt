@@ -48,7 +48,7 @@ CREATE TABLE merchant (
 	 );
 
 
-CREATE TABLE capstone.transaction (
+CREATE TABLE capstone.order_transaction (
     transactionid bigint PRIMARY KEY,
     customerid bigint,
     invoiceamount float,
@@ -147,6 +147,8 @@ spark-submit --class com.edureka.capstone.jobs.SparkStreamingMerchantJob --maste
 spark-submit --class com.edureka.capstone.jobs.SparkStreamingTransactionJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 spark-submit --class com.edureka.capstone.jobs.SparkStreamingCardJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 spark-submit --class com.edureka.capstone.jobs.BankMerchantAggregationJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+
+spark-submit --class com.edureka.capstone.jobs.SparkStreamingTxJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
 bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic merchant_topic --from-beginning
 
