@@ -2,7 +2,7 @@ package com.edureka.capstone;
 
 import java.io.Serializable;
 
-public class Transaction implements Serializable {
+public class OrderTransaction implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private String transactionid;
@@ -78,7 +78,7 @@ public class Transaction implements Serializable {
 		this.invoiceamount = invoiceamount;
 	}
 
-	public Transaction(String transactionid, Long customerid, Long merchantid, String status, long timestamp,
+	public OrderTransaction(String transactionid, Long customerid, Long merchantid, String status, long timestamp,
 			String invoicenumber, float invoiceamount, String segment) {
 		super();
 		this.transactionid = transactionid;

@@ -37,7 +37,7 @@ import com.edureka.capstone.DailyTransactionCounter;
 import com.edureka.capstone.FileProperties;
 import com.edureka.capstone.MerchantGenderTransaction;
 import com.edureka.capstone.MerchantTransactionCounter;
-import com.edureka.capstone.Transaction;
+import com.edureka.capstone.OrderTransaction;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 
@@ -87,7 +87,7 @@ public class SparkStreamingTransactionJob {
 		Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
 		GenericRecord record = recordInjection.invert(value).get();
 
-		Transaction transaction = new Transaction(record.get("txId").toString(),
+		OrderTransaction transaction = new OrderTransaction(record.get("txId").toString(),
 				Long.parseLong(record.get("customerId").toString()),
 				Long.parseLong(record.get("merchantId").toString()), record.get("status").toString(),
 				Long.parseLong(record.get("timestamp").toString()), record.get("invoiceNum").toString(),
@@ -97,7 +97,7 @@ public class SparkStreamingTransactionJob {
 		cal.setTimeInMillis(transaction.getTimestamp());
 
 		javaFunctions(jsc.parallelize(Arrays.asList(transaction)))
-				.writerBuilder("capstone", "transaction", mapToRow(Transaction.class)).saveToCassandra();
+				.writerBuilder("capstone", "order_transaction", mapToRow(OrderTransaction.class)).saveToCassandra();
 
 		CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(jsc)
 				.cassandraTable("capstone", "bank_by_customer").where("customerid = " + transaction.getCustomerid());

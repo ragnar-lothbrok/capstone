@@ -54,7 +54,7 @@ public class SparkStreamingMerchantJob {
 		} else {
 			conf = new SparkConf();
 		}
-		conf.setAppName(SparkStreamingCustomerJob.class.getSimpleName());
+		conf.setAppName(SparkStreamingMerchantJob.class.getSimpleName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
 		if (prop.get("spark.cassandra.auth.username") != null) {
 			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
