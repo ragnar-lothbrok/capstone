@@ -63,7 +63,7 @@ public class SparkStreamingTransactionJob {
 		} else {
 			conf = new SparkConf();
 		}
-		conf.setAppName(SparkStreamingCustomerJob.class.getSimpleName());
+		conf.setAppName(SparkStreamingTransactionJob.class.getSimpleName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
 		if (prop.get("spark.cassandra.auth.username") != null) {
 			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
@@ -95,8 +95,16 @@ public class SparkStreamingTransactionJob {
 
 		Calendar cal = Calendar.getInstance();
 		cal.setTimeInMillis(transaction.getTimestamp());
+		
+		LOGGER.info("transaction = {} ", transaction);
 
-		javaFunctions(jsc.parallelize(Arrays.asList(transaction)))
+		List<OrderTransaction> transactionList = Arrays.asList(transaction);
+
+		LOGGER.info("transactionList = " + transactionList);
+
+		JavaRDD<OrderTransaction> newRDD = jsc.parallelize(transactionList);
+
+		javaFunctions(newRDD)
 				.writerBuilder("capstone", "order_transaction", mapToRow(OrderTransaction.class)).saveToCassandra();
 
 		CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(jsc)
