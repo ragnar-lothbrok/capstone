@@ -53,7 +53,7 @@ public class SparkStreamingTransactionJob {
 		} else {
 			conf = new SparkConf();
 		}
-		conf.setAppName(SparkStreamingCustomerJob.class.getName());
+		conf.setAppName(SparkStreamingCustomerJob.class.getSimpleName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
 		if (prop.get("spark.cassandra.auth.username") != null) {
 			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
@@ -61,7 +61,7 @@ public class SparkStreamingTransactionJob {
 		} else {
 			conf.set("hadoop.home.dir", "/");
 		}
-		conf.setAppName(SparkStreamingCardJob.class.getName());
+		conf.setAppName(SparkStreamingTransactionJob.class.getName());
 
 		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
 		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());

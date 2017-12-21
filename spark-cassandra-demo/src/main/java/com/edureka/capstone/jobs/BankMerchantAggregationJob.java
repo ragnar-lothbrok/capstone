@@ -42,7 +42,7 @@ public class BankMerchantAggregationJob {
 	private static JavaSparkContext javaSparkContext = null;
 
 	public static void main(String[] args) throws ParseException {
-
+		
 		NumberFormat formatter = new DecimalFormat("#0.00");
 
 		Properties prop = FileProperties.properties;

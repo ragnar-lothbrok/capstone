@@ -62,7 +62,7 @@ public class SparkStreamingCustomerJob {
 		} else {
 			conf.set("hadoop.home.dir", "/");
 		}
-		conf.setAppName(SparkStreamingCardJob.class.getName());
+		conf.setAppName(SparkStreamingCustomerJob.class.getSimpleName());
 
 		kafkaParams.put("metadata.broker.list", prop.get("metadata.broker.list").toString());
 		kafkaParams.put("auto.offset.reset", prop.get("auto.offset.reset").toString());
