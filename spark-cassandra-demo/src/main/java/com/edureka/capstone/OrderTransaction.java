@@ -4,6 +4,13 @@ import java.io.Serializable;
 
 public class OrderTransaction implements Serializable {
 
+	@Override
+	public String toString() {
+		return "OrderTransaction [transactionid=" + transactionid + ", customerid=" + customerid + ", merchantid="
+				+ merchantid + ", status=" + status + ", timestamp=" + timestamp + ", invoicenumber=" + invoicenumber
+				+ ", invoiceamount=" + invoiceamount + ", segment=" + segment + "]";
+	}
+
 	private static final long serialVersionUID = 1L;
 	private String transactionid;
 	private Long customerid;

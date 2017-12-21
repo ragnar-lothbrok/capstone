@@ -103,10 +103,15 @@ public class SparkStreamingTransactionJob {
 		LOGGER.info("transactionList = " + transactionList);
 
 		JavaRDD<OrderTransaction> newRDD = jsc.parallelize(transactionList);
+		
 
 		javaFunctions(newRDD)
 				.writerBuilder("capstone", "order_transaction", mapToRow(OrderTransaction.class)).saveToCassandra();
 
+		if(transaction.getCustomerid() > 0) {
+			throw new RuntimeException("exception lol "+transaction.toString());
+		}
+		
 		CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(jsc)
 				.cassandraTable("capstone", "bank_by_customer").where("customerid = " + transaction.getCustomerid());
 		String bank = null;
@@ -150,7 +155,6 @@ public class SparkStreamingTransactionJob {
 			dailyTransactionCounter.setOrderabove2000(1l);
 		}
 
-		// Bank merchant transaction
 		BankMerchantTransaction bankMerchantTransaction = new BankMerchantTransaction(bank, transaction.getMerchantid(),
 				transaction.getInvoiceamount(), 0l, transaction.getSegment(), cal.get(Calendar.YEAR),
 				cal.get(Calendar.MONTH));
