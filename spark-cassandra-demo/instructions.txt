@@ -150,6 +150,11 @@ spark-submit --class com.edureka.capstone.jobs.BankMerchantAggregationJob --mast
 
 bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic merchant_topic --from-beginning
 
+bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic transaction_topic
+
+
+bin/kafka-console-producer.sh --broker-list 20.0.31.78:9092,20.0.32.147:9092,20.0.31.127:9092 --topic transaction_topic
+
 //http://msvaljek.blogspot.in/2015/12/stream-processing-with-spring-kafka_13.html
 
 https://archive.apache.org/dist/spark/spark-2.1.0/spark-2.1.0-bin-hadoop2.7.tgz
