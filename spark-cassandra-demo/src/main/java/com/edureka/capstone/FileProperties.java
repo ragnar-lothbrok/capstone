@@ -9,7 +9,7 @@ public class FileProperties {
 	static {
 		properties = new Properties();
 
-		Boolean isEdurekaServer = false;
+		Boolean isEdurekaServer = true;
 		if (isEdurekaServer) {
 			properties.put("com.smcc.app.cassandra.host", "20.0.41.93");
 			properties.put("com.smcc.app.cassandra.port", "9042");

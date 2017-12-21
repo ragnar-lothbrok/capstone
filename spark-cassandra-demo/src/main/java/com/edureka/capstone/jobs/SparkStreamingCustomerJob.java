@@ -10,23 +10,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.spark.connector.japi.CassandraRow;
-import com.datastax.spark.connector.japi.rdd.CassandraTableScanJavaRDD;
 import com.edureka.capstone.Customer;
 import com.edureka.capstone.FileProperties;
 import com.twitter.bijection.Injection;
@@ -71,80 +71,66 @@ public class SparkStreamingCustomerJob {
 
 	}
 
-	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
+	private static void saveToCassandra(String value, JavaSparkContext jsc) {
+		Schema.Parser parser = new Schema.Parser();
+		Schema schema = parser.parse(FileProperties.CUSTOMER_AVRO);
+		Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
+		GenericRecord record = recordInjection.invert(value).get();
 
-		private static final long serialVersionUID = 1L;
+		Customer customer = new Customer(Long.parseLong(record.get("customerId").toString()),
+				record.get("customerName").toString(), record.get("mobileNumber").toString(),
+				record.get("gender").toString(), Long.parseLong(record.get("bithDate").toString()),
+				record.get("email").toString(), record.get("address").toString(), record.get("state").toString(),
+				record.get("country").toString(), Long.parseLong(record.get("pincode").toString()));
 
-		@Override
-		public void call(Tuple2<String, String> arg0) {
-			try {
-				Schema.Parser parser = new Schema.Parser();
-				Schema schema = parser.parse(FileProperties.CUSTOMER_AVRO);
-				Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
-				GenericRecord record = recordInjection.invert(arg0._2).get();
+		List<Customer> customerList = Arrays.asList(customer);
 
-				Customer customer = new Customer(Long.parseLong(record.get("customerId").toString()),
-						record.get("customerName").toString(), record.get("mobileNumber").toString(),
-						record.get("gender").toString(), Long.parseLong(record.get("bithDate").toString()),
-						record.get("email").toString(), record.get("address").toString(),
-						record.get("state").toString(), record.get("country").toString(),
-						Long.parseLong(record.get("pincode").toString()));
+		LOGGER.error("Customer List = {} jsc = {} ", customerList, jsc);
 
-				List<Customer> customerList = Arrays.asList(customer);
+		JavaRDD<Customer> newRDD = jsc.parallelize(customerList);
 
-				LOGGER.error("Customer List = {} jsc = {} ", customerList,
-						JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()));
+		LOGGER.info("newRDD = {} ", newRDD);
 
-				CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(
-						JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()))
-								.cassandraTable("capstone", "customer").where("customerid = 11111");
-				String gender = null;
-				if (customerGenderDetails.count() > 0) {
-					gender = customerGenderDetails.first().getString("gender");
-				}
-
-				LOGGER.info("GENDER = {} ", gender);
-
-				// JavaRDD<Customer> newRDD =
-				// JavaSparkContext.fromSparkContext(SparkContext.getOrCreate())
-				// .parallelize(customerList);
-
-				JavaRDD<Customer> newRDD = ssc.sparkContext().parallelize(customerList);
-
-				LOGGER.info("newRDD = {} ", newRDD);
-
-				javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class)).saveToCassandra();
-				LOGGER.error("SAVED TO CASSANDRA");
-			} catch (Exception e) {
-				LOGGER.error("Exception occured while parsing = {} ", e.getMessage());
-				throw e;
-			}
-
-		}
-	};
+		javaFunctions(newRDD).writerBuilder("capstone", "customer", mapToRow(Customer.class)).saveToCassandra();
+		LOGGER.error("SAVED TO CASSANDRA");
+	}
 
 	public static void main(String[] args) throws InterruptedException {
 
-		ssc = new JavaStreamingContext(JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)),
-				new Duration(2000));
+		JavaSparkContext jsc = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf));
+
+		ssc = new JavaStreamingContext(jsc, new Duration(2000));
 
 		Set<String> topics = Collections.singleton("customer_topic");
 
 		JavaPairInputDStream<String, String> directKafkaStream = KafkaUtils.createDirectStream(ssc, String.class,
 				String.class, StringDecoder.class, StringDecoder.class, kafkaParams, topics);
 
-		VoidFunction<JavaPairRDD<String, String>> iterateFunc = new VoidFunction<JavaPairRDD<String, String>>() {
-
+		JavaDStream<String> valuesStream = directKafkaStream.map(new Function<Tuple2<String, String>, String>() {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public void call(JavaPairRDD<String, String> arg0) throws Exception {
-				if (!arg0.isEmpty())
-					arg0.foreach(mapFunc);
+			public String call(Tuple2<String, String> v1) throws Exception {
+				return v1._2();
 			}
-		};
+		});
 
-		directKafkaStream.foreachRDD(iterateFunc);
+		valuesStream.foreachRDD(new VoidFunction<JavaRDD<String>>() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void call(JavaRDD<String> t) throws Exception {
+				List<String> records = t.collect();
+				LOGGER.info("Total records = {} ", records.size());
+				records.iterator().forEachRemaining(new Consumer<String>() {
+
+					@Override
+					public void accept(String t) {
+						saveToCassandra(t, jsc);
+					}
+				});
+			}
+		});
 
 		ssc.start();
 		ssc.awaitTermination();

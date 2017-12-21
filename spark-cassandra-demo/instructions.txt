@@ -146,6 +146,7 @@ spark-submit --class com.edureka.capstone.jobs.SparkStreamingCustomerJob --maste
 spark-submit --class com.edureka.capstone.jobs.SparkStreamingMerchantJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 spark-submit --class com.edureka.capstone.jobs.SparkStreamingTransactionJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 spark-submit --class com.edureka.capstone.jobs.SparkStreamingCardJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+spark-submit --class com.edureka.capstone.jobs.BankMerchantAggregationJob --master yarn --deploy-mode cluster /mnt/home/edureka_339659/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
 bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic merchant_topic --from-beginning
 
@@ -154,6 +155,9 @@ bin/kafka-console-consumer.sh --zookeeper 20.0.32.147:2181 --topic merchant_topi
 https://archive.apache.org/dist/spark/spark-2.1.0/spark-2.1.0-bin-hadoop2.7.tgz
 
 https://archive.apache.org/dist/kafka/0.8.2.1/kafka_2.11-0.8.2.1.tgz
+
+
+> src/main/java/com/edureka/capstone/jobs/SparkStreamingCustomerJob.java 
 
 spark-submit  --class com.edureka.capstone.jobs.SparkStreamingMerchantJob /Users/raghugupta/Documents/gitrepo/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 

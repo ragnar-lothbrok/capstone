@@ -10,18 +10,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.edureka.capstone.CardDetails;
 import com.edureka.capstone.FileProperties;
@@ -35,7 +39,11 @@ import org.apache.spark.streaming.Duration;
 
 public class SparkStreamingCardJob {
 
+	private final static Logger LOGGER = LoggerFactory.getLogger(SparkStreamingCardJob.class);
+
 	private static SparkConf conf = null;
+
+	private static JavaStreamingContext ssc = null;
 
 	private static Map<String, String> kafkaParams = new HashMap<>();
 
@@ -63,56 +71,66 @@ public class SparkStreamingCardJob {
 
 	}
 
-	static VoidFunction<Tuple2<String, String>> mapFunc = new VoidFunction<Tuple2<String, String>>() {
+	private static void saveToCassandra(String value, JavaSparkContext jsc) {
+		Schema.Parser parser = new Schema.Parser();
+		Schema schema = parser.parse(FileProperties.CARD_AVRO);
+		Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
+		GenericRecord record = recordInjection.invert(value).get();
 
-		private static final long serialVersionUID = 1L;
+		CardDetails cardDetails = new CardDetails(Long.parseLong(record.get("cardId").toString()),
+				Long.parseLong(record.get("customerId").toString()), record.get("bank").toString(),
+				record.get("type").toString(), record.get("nameOnCard").toString(),
+				Integer.parseInt(record.get("expiryMonth").toString()),
+				Integer.parseInt(record.get("expiryYear").toString()), record.get("cardNum").toString(),
+				Float.parseFloat(record.get("cardLimit").toString()));
 
-		@Override
-		public void call(Tuple2<String, String> arg0) throws Exception {
-			Schema.Parser parser = new Schema.Parser();
-			Schema schema = parser.parse(FileProperties.CARD_AVRO);
-			Injection<GenericRecord, String> recordInjection = GenericAvroCodecs.toJson(schema);
-			GenericRecord record = recordInjection.invert(arg0._2).get();
+		List<CardDetails> cardDetailList = Arrays.asList(cardDetails);
 
-			CardDetails cardDetails = new CardDetails(Long.parseLong(record.get("cardId").toString()),
-					Long.parseLong(record.get("customerId").toString()), record.get("bank").toString(),
-					record.get("type").toString(), record.get("nameOnCard").toString(),
-					Integer.parseInt(record.get("expiryMonth").toString()),
-					Integer.parseInt(record.get("expiryYear").toString()), record.get("cardNum").toString(),
-					Float.parseFloat(record.get("cardLimit").toString()));
+		LOGGER.error("cardDetailList List = {} jsc = {} ", cardDetailList, jsc);
 
-			List<CardDetails> cardDetailList = Arrays.asList(cardDetails);
+		JavaRDD<CardDetails> newRDD = jsc.parallelize(cardDetailList);
 
-			JavaRDD<CardDetails> newRDD = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate()).parallelize(cardDetailList);
+		LOGGER.info("newRDD = {} ", newRDD);
 
-			if (!newRDD.isEmpty())
-				javaFunctions(newRDD).writerBuilder("capstone", "carddetails", mapToRow(CardDetails.class))
-				.saveToCassandra();
-		}
-	};
+		javaFunctions(newRDD).writerBuilder("capstone", "carddetails", mapToRow(CardDetails.class)).saveToCassandra();
+	}
 
 	public static void main(String[] args) throws InterruptedException {
 
-		JavaStreamingContext ssc = new JavaStreamingContext(
-				JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf)), new Duration(2000));
+		JavaSparkContext jsc = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf));
+
+		ssc = new JavaStreamingContext(jsc, new Duration(1000));
 
 		Set<String> topics = Collections.singleton("card_topic");
 
 		JavaPairInputDStream<String, String> directKafkaStream = KafkaUtils.createDirectStream(ssc, String.class,
 				String.class, StringDecoder.class, StringDecoder.class, kafkaParams, topics);
 
-		VoidFunction<JavaPairRDD<String, String>> iterateFunc = new VoidFunction<JavaPairRDD<String, String>>() {
-
+		JavaDStream<String> valuesStream = directKafkaStream.map(new Function<Tuple2<String, String>, String>() {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public void call(JavaPairRDD<String, String> arg0) throws Exception {
-				if (!arg0.isEmpty())
-					arg0.foreach(mapFunc);
+			public String call(Tuple2<String, String> v1) throws Exception {
+				return v1._2();
 			}
-		};
+		});
 
-		directKafkaStream.foreachRDD(iterateFunc);
+		valuesStream.foreachRDD(new VoidFunction<JavaRDD<String>>() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void call(JavaRDD<String> t) throws Exception {
+				List<String> records = t.collect();
+				LOGGER.info("Total records = {} ", records.size());
+				records.iterator().forEachRemaining(new Consumer<String>() {
+
+					@Override
+					public void accept(String t) {
+						saveToCassandra(t, jsc);
+					}
+				});
+			}
+		});
 
 		ssc.start();
 		ssc.awaitTermination();
