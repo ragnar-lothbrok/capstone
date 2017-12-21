@@ -108,10 +108,6 @@ public class SparkStreamingTransactionJob {
 		javaFunctions(newRDD)
 				.writerBuilder("capstone", "order_transaction", mapToRow(OrderTransaction.class)).saveToCassandra();
 
-		if(transaction.getCustomerid() > 0) {
-			throw new RuntimeException("exception lol "+transaction.toString());
-		}
-		
 		CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(jsc)
 				.cassandraTable("capstone", "bank_by_customer").where("customerid = " + transaction.getCustomerid());
 		String bank = null;
