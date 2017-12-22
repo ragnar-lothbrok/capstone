@@ -9,9 +9,10 @@ CREATE TABLE carddetails (
 	customerId bigint,
 	bank text,
 	type text,
-	nameOnCard text,
 	expiryMonth int,
 	expiryYear int,
+	valid_month int,
+	valid_year int,
 	cardNum text,
 	cardLimit float,
 	PRIMARY KEY ((cardId),bank));
@@ -22,7 +23,10 @@ CREATE TABLE customer (
 	name text,
 	mobilenumber text,
 	gender text,
+	title text,
+	martial_status text,
 	birthdate bigint,
+	created bigint,
 	email text,
 	address text,
 	state text,
@@ -41,10 +45,9 @@ CREATE TABLE merchant (
 	state text,
 	country text,
 	pincode text,
-	merchanttype int,
-	segment text,
 	taxRegNum text,
-	description text
+	description text,
+	longlat text
 	 );
 
 

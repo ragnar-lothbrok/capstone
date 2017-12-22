@@ -6,14 +6,14 @@
         { "name": "customerName", "type": "string" },
         { "name": "mobileNumber", "type": "long" },
         { "name": "gender", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "martial_status", "type": "string" },
         { "name": "bithDate", "type": "long" },
         { "name": "email", "type": "string" },
         { "name": "address", "type": "string" },
         { "name": "state", "type": "string" },
         { "name": "country", "type": "string" },
         { "name": "pincode", "type": "int" },
-        { "name": "userType", "type": "int" },
-        { "name": "vehicleType", "type": "string" },
-        { "name": "firstVisit", "type": "long" }
+        { "name": "created", "type": "long" }
     ]
 }

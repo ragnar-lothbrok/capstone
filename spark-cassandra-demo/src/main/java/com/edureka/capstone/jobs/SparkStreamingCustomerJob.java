@@ -81,7 +81,9 @@ public class SparkStreamingCustomerJob {
 				record.get("customerName").toString(), record.get("mobileNumber").toString(),
 				record.get("gender").toString(), Long.parseLong(record.get("bithDate").toString()),
 				record.get("email").toString(), record.get("address").toString(), record.get("state").toString(),
-				record.get("country").toString(), Long.parseLong(record.get("pincode").toString()));
+				record.get("country").toString(), Long.parseLong(record.get("pincode").toString()),
+				record.get("title").toString(), record.get("martial_status").toString(),
+				Long.parseLong(record.get("created").toString()));
 
 		List<Customer> customerList = Arrays.asList(customer);
 

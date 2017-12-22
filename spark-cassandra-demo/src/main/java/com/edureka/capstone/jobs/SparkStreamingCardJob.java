@@ -79,10 +79,11 @@ public class SparkStreamingCardJob {
 
 		CardDetails cardDetails = new CardDetails(Long.parseLong(record.get("cardId").toString()),
 				Long.parseLong(record.get("customerId").toString()), record.get("bank").toString(),
-				record.get("type").toString(), record.get("nameOnCard").toString(),
-				Integer.parseInt(record.get("expiryMonth").toString()),
+				record.get("type").toString(), Integer.parseInt(record.get("expiryMonth").toString()),
 				Integer.parseInt(record.get("expiryYear").toString()), record.get("cardNum").toString(),
-				Float.parseFloat(record.get("cardLimit").toString()));
+				Float.parseFloat(record.get("cardLimit").toString()),
+				Integer.parseInt(record.get("valid_month").toString()),
+				Integer.parseInt(record.get("valid_year").toString()));
 
 		List<CardDetails> cardDetailList = Arrays.asList(cardDetails);
 

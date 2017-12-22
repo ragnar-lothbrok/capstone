@@ -8,6 +8,7 @@
         { "name": "status", "type": "string" },
         { "name": "timestamp", "type": "long" },
         { "name": "invoiceNum", "type": "string" },
-        { "name": "invoiceAmount", "type": "float" }
+        { "name": "invoiceAmount", "type": "float" },
+        { "name": "segment", "type": "string" }
     ]
 }

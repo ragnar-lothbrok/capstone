@@ -80,10 +80,9 @@ public class SparkStreamingMerchantJob {
 		Merchant merchant = new Merchant(Long.parseLong(record.get("merchantId").toString()),
 				record.get("merchantName").toString(), record.get("email").toString(), record.get("address").toString(),
 				record.get("state").toString(), record.get("country").toString(),
-				Long.parseLong(record.get("pincode").toString()), record.get("segment").toString(),
-				record.get("taxRegNum").toString(), record.get("description").toString(),
-				Long.parseLong(record.get("startDate").toString()),
-				Integer.parseInt(record.get("merchantType").toString()), record.get("mobileNumber").toString());
+				Long.parseLong(record.get("pincode").toString()), record.get("taxRegNum").toString(),
+				record.get("description").toString(), Long.parseLong(record.get("startDate").toString()),
+				record.get("mobileNumber").toString(), record.get("longlat").toString());
 
 		LOGGER.info("merchant = {} ", merchant);
 

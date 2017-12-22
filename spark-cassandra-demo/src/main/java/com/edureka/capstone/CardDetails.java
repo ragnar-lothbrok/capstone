@@ -10,24 +10,42 @@ public class CardDetails implements Serializable {
 	private Long customerid;
 	private String bank;
 	private String type;
-	private String nameoncard;
 	private Integer expirymonth;
 	private Integer expiryyear;
 	private String cardnum;
 	private Float cardlimit;
+	private Integer valid_month;
+	private Integer valid_year;
 
-	public CardDetails(Long cardId, Long customerId, String bank, String type, String nameOnCard, Integer expiryMonth,
-			Integer expiryYear, String cardNum, Float cardLimit) {
+	public CardDetails(Long cardId, Long customerId, String bank, String type, Integer expiryMonth, Integer expiryYear,
+			String cardNum, Float cardLimit, Integer valid_month, Integer valid_year) {
 		super();
 		this.cardid = cardId;
 		this.customerid = customerId;
 		this.bank = bank;
 		this.type = type;
-		this.nameoncard = nameOnCard;
 		this.expirymonth = expiryMonth;
 		this.expiryyear = expiryYear;
 		this.cardnum = cardNum;
 		this.cardlimit = cardLimit;
+		this.valid_month = valid_month;
+		this.valid_year = valid_year;
+	}
+
+	public Integer getValid_month() {
+		return valid_month;
+	}
+
+	public void setValid_month(Integer valid_month) {
+		this.valid_month = valid_month;
+	}
+
+	public Integer getValid_year() {
+		return valid_year;
+	}
+
+	public void setValid_year(Integer valid_year) {
+		this.valid_year = valid_year;
 	}
 
 	public Long getCardid() {
@@ -60,14 +78,6 @@ public class CardDetails implements Serializable {
 
 	public void setType(String type) {
 		this.type = type;
-	}
-
-	public String getNameoncard() {
-		return nameoncard;
-	}
-
-	public void setNameoncard(String nameoncard) {
-		this.nameoncard = nameoncard;
 	}
 
 	public Integer getExpirymonth() {

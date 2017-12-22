@@ -7,22 +7,20 @@ public class Merchant implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private Long merchantid;
+	private String taxregnum;
 	private String merchantname;
+	private String mobilenumber;
+	private Long startdate;
 	private String email;
 	private String address;
 	private String state;
 	private String country;
 	private Long pincode;
-	private String segment;
-	private String taxregnum;
 	private String description;
-	private Long startdate;
-	private Integer merchanttype;
-	private String mobilenumber;
+	private String longlat;
 
 	public Merchant(Long merchantid, String merchantname, String email, String address, String state, String country,
-			Long pincode, String category, String taxReg, String description, Long startdate, Integer merchanttype,
-			String mobileNumber) {
+			Long pincode, String taxReg, String description, Long startdate, String mobileNumber, String longlat) {
 		super();
 		this.merchantid = merchantid;
 		this.merchantname = merchantname;
@@ -31,12 +29,11 @@ public class Merchant implements Serializable {
 		this.state = state;
 		this.country = country;
 		this.pincode = pincode;
-		this.segment = category;
 		this.taxregnum = taxReg;
 		this.description = description;
 		this.startdate = startdate;
-		this.merchanttype = merchanttype;
 		this.mobilenumber = mobileNumber;
+		this.longlat = longlat;
 	}
 
 	public Long getMerchantid() {
@@ -95,14 +92,6 @@ public class Merchant implements Serializable {
 		this.pincode = pincode;
 	}
 
-	public String getSegment() {
-		return segment;
-	}
-
-	public void setSegment(String segment) {
-		this.segment = segment;
-	}
-
 	public String getTaxregnum() {
 		return taxregnum;
 	}
@@ -127,14 +116,6 @@ public class Merchant implements Serializable {
 		this.startdate = startdate;
 	}
 
-	public Integer getMerchanttype() {
-		return merchanttype;
-	}
-
-	public void setMerchanttype(Integer merchanttype) {
-		this.merchanttype = merchanttype;
-	}
-
 	public String getMobilenumber() {
 		return mobilenumber;
 	}
@@ -143,12 +124,12 @@ public class Merchant implements Serializable {
 		this.mobilenumber = mobilenumber;
 	}
 
-	@Override
-	public String toString() {
-		return "Merchant [merchantid=" + merchantid + ", merchantname=" + merchantname + ", email=" + email
-				+ ", address=" + address + ", state=" + state + ", country=" + country + ", pincode=" + pincode
-				+ ", segment=" + segment + ", taxregnum=" + taxregnum + ", description=" + description + ", startdate="
-				+ startdate + ", merchanttype=" + merchanttype + ", mobilenumber=" + mobilenumber + "]";
+	public String getLonglat() {
+		return longlat;
+	}
+
+	public void setLonglat(String longlat) {
+		this.longlat = longlat;
 	}
 
 }

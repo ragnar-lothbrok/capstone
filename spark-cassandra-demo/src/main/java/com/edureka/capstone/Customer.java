@@ -16,6 +16,9 @@ public class Customer implements Serializable {
 	private String state;
 	private String country;
 	private Long pincode;
+	private String title;
+	private String martial_status;
+	private Long created;
 
 	public Long getCustomerid() {
 		return customerid;
@@ -48,8 +51,6 @@ public class Customer implements Serializable {
 	public void setGender(String gender) {
 		this.gender = gender;
 	}
-
-	
 
 	public long getBirthdate() {
 		return birthdate;
@@ -99,8 +100,33 @@ public class Customer implements Serializable {
 		this.pincode = pincode;
 	}
 
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	public String getMartial_status() {
+		return martial_status;
+	}
+
+	public void setMartial_status(String martial_status) {
+		this.martial_status = martial_status;
+	}
+
+	public Long getCreated() {
+		return created;
+	}
+
+	public void setCreated(Long created) {
+		this.created = created;
+	}
+
 	public Customer(Long id, String name, String mobilenumber, String gender, long birthdate, String email,
-			String address, String state, String country, Long pincode) {
+			String address, String state, String country, Long pincode, String title, String martial_status,
+			Long created) {
 		super();
 		this.customerid = id;
 		this.name = name;
@@ -112,6 +138,9 @@ public class Customer implements Serializable {
 		this.state = state;
 		this.country = country;
 		this.pincode = pincode;
+		this.title = title;
+		this.martial_status = martial_status;
+		this.created = created;
 	}
 
 }

@@ -3,6 +3,7 @@
     "name": "merchant",
     "fields": [
         { "name": "merchantId", "type": "long" },
+        { "name": "taxRegNum", "type": "string" },
         { "name": "merchantName", "type": "string" },
         { "name": "mobileNumber", "type": "long" },
         { "name": "startDate", "type": "long" },
@@ -11,9 +12,7 @@
         { "name": "state", "type": "string" },
         { "name": "country", "type": "string" },
         { "name": "pincode", "type": "int" },
-        { "name": "merchantType", "type": "int" },
-        { "name": "segment", "type": "string" },
-        { "name": "taxRegNum", "type": "string" },
-        { "name": "description", "type": "string" }
+        { "name": "description", "type": "string" },
+        { "name": "longlat", "type": "string" }
     ]
 }

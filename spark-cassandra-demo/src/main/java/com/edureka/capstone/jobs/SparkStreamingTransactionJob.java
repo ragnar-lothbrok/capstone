@@ -95,123 +95,134 @@ public class SparkStreamingTransactionJob {
 
 		Calendar cal = Calendar.getInstance();
 		cal.setTimeInMillis(transaction.getTimestamp());
-		
+
 		LOGGER.info("transaction = {} ", transaction);
 
-		List<OrderTransaction> transactionList = Arrays.asList(transaction);
+		CassandraTableScanJavaRDD<CassandraRow> txDetails = javaFunctions(jsc)
+				.cassandraTable("capstone", "order_transaction")
+				.where("transactionid = '" + transaction.getTransactionid() + "'");
 
-		LOGGER.info("transactionList = " + transactionList);
+		long count = txDetails.count();
 
-		JavaRDD<OrderTransaction> newRDD = jsc.parallelize(transactionList);
-		
+		LOGGER.info("count = {} " , count);
 
-		javaFunctions(newRDD)
-				.writerBuilder("capstone", "order_transaction", mapToRow(OrderTransaction.class)).saveToCassandra();
+		if (count <= 0) {
+			List<OrderTransaction> transactionList = Arrays.asList(transaction);
 
-		CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(jsc)
-				.cassandraTable("capstone", "bank_by_customer").where("customerid = " + transaction.getCustomerid());
-		String bank = null;
-		if (customerDetails.count() > 0) {
-			bank = customerDetails.first().getString("bank");
+			LOGGER.info("transactionList = {} " , transactionList);
+
+			JavaRDD<OrderTransaction> newRDD = jsc.parallelize(transactionList);
+
+			javaFunctions(newRDD).writerBuilder("capstone", "order_transaction", mapToRow(OrderTransaction.class))
+					.saveToCassandra();
+
+			CassandraTableScanJavaRDD<CassandraRow> customerDetails = javaFunctions(jsc)
+					.cassandraTable("capstone", "bank_by_customer")
+					.where("customerid = " + transaction.getCustomerid());
+			String bank = null;
+			if (customerDetails.count() > 0) {
+				bank = customerDetails.first().getString("bank");
+			}
+
+			CustomerTransactionCounter customerTransactionCounter = new CustomerTransactionCounter();
+			MerchantTransactionCounter merchantTransactionCounter = new MerchantTransactionCounter();
+			DailyTransactionCounter dailyTransactionCounter = new DailyTransactionCounter();
+
+			customerTransactionCounter.setCustomerid(Long.parseLong(record.get("customerId").toString()));
+			merchantTransactionCounter.setMerchantid(Long.parseLong(record.get("merchantId").toString()));
+			dailyTransactionCounter.setDate(sdf.format(cal.getTime()));
+
+			if (transaction.getStatus().equalsIgnoreCase("SUCCESS")) {
+				customerTransactionCounter.setOrdersuccesscounter(1l);
+				merchantTransactionCounter.setOrdersuccesscounter(1l);
+				dailyTransactionCounter.setOrdersuccesscounter(1l);
+			} else {
+				customerTransactionCounter.setOrdercancelcounter(1l);
+				merchantTransactionCounter.setOrdercancelcounter(1l);
+				dailyTransactionCounter.setOrdercancelcounter(1l);
+			}
+
+			if (transaction.getInvoiceamount() <= 500) {
+				customerTransactionCounter.setOrderbelow500(1l);
+				merchantTransactionCounter.setOrderbelow500(1l);
+				dailyTransactionCounter.setOrderbelow500(1l);
+			} else if (transaction.getInvoiceamount() > 500 && transaction.getInvoiceamount() <= 1000) {
+				customerTransactionCounter.setOrderbelow1000(1l);
+				merchantTransactionCounter.setOrderbelow1000(1l);
+				dailyTransactionCounter.setOrderbelow1000(1l);
+			} else if (transaction.getInvoiceamount() > 1000 && transaction.getInvoiceamount() < 2000) {
+				customerTransactionCounter.setOrderbelow2000(1l);
+				merchantTransactionCounter.setOrderbelow2000(1l);
+				dailyTransactionCounter.setOrderbelow2000(1l);
+			} else {
+				customerTransactionCounter.setOrderabove2000(1l);
+				merchantTransactionCounter.setOrderabove2000(1l);
+				dailyTransactionCounter.setOrderabove2000(1l);
+			}
+
+			BankMerchantTransaction bankMerchantTransaction = new BankMerchantTransaction(bank,
+					transaction.getMerchantid(), transaction.getInvoiceamount(), 0l, transaction.getSegment(),
+					cal.get(Calendar.YEAR), cal.get(Calendar.MONTH));
+
+			CassandraTableScanJavaRDD<CassandraRow> bankMerchantDetails = javaFunctions(jsc)
+					.cassandraTable("capstone", "bank_merchant_transaction")
+					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH) + " and bank = '"
+							+ bankMerchantTransaction.getBank() + "' and merchantid="
+							+ bankMerchantTransaction.getMerchantid() + " and segment='"
+							+ bankMerchantTransaction.getSegment() + "'");
+			float amount = 0f;
+			Long orderCount = 0l;
+
+			if (bankMerchantDetails.count() > 0) {
+				amount = bankMerchantDetails.first().getFloat("totalamount");
+				orderCount = bankMerchantDetails.first().getLong("ordercount");
+			}
+
+			bankMerchantTransaction.setTotalamount(amount + bankMerchantTransaction.getTotalamount());
+			bankMerchantTransaction.setOrdercount(orderCount + 1);
+
+			javaFunctions(jsc.parallelize(Arrays.asList(bankMerchantTransaction)))
+					.writerBuilder("capstone", "bank_merchant_transaction", mapToRow(BankMerchantTransaction.class))
+					.saveToCassandra();
+
+			javaFunctions(jsc.parallelize(Arrays.asList(customerTransactionCounter)))
+					.writerBuilder("capstone", "customer_transaction", mapToRow(CustomerTransactionCounter.class))
+					.saveToCassandra();
+
+			javaFunctions(jsc.parallelize(Arrays.asList(merchantTransactionCounter)))
+					.writerBuilder("capstone", "merchant_transaction", mapToRow(MerchantTransactionCounter.class))
+					.saveToCassandra();
+
+			javaFunctions(jsc.parallelize(Arrays.asList(dailyTransactionCounter)))
+					.writerBuilder("capstone", "daily_transaction", mapToRow(DailyTransactionCounter.class))
+					.saveToCassandra();
+
+			CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(jsc)
+					.cassandraTable("capstone", "customer").where("customerid = " + transaction.getCustomerid());
+			String gender = null;
+			if (customerGenderDetails.count() > 0) {
+				gender = customerGenderDetails.first().getString("gender");
+			}
+
+			MerchantGenderTransaction merchantGenderTransaction = new MerchantGenderTransaction(
+					bankMerchantTransaction.getYear(), bankMerchantTransaction.getMonth(),
+					bankMerchantTransaction.getMerchantid(), transaction.getInvoiceamount(), gender);
+
+			CassandraTableScanJavaRDD<CassandraRow> merchantCustomerGenderDetails = javaFunctions(jsc)
+					.cassandraTable("capstone", "merchant_gender_transaction")
+					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH)
+							+ " and merchantid=" + bankMerchantTransaction.getMerchantid() + " and gender='" + gender
+							+ "'");
+			amount = 0f;
+			if (merchantCustomerGenderDetails.count() > 0) {
+				amount = merchantCustomerGenderDetails.first().getFloat("amount");
+			}
+			merchantGenderTransaction.setAmount(amount + merchantGenderTransaction.getAmount());
+
+			javaFunctions(jsc.parallelize(Arrays.asList(merchantGenderTransaction)))
+					.writerBuilder("capstone", "merchant_gender_transaction", mapToRow(MerchantGenderTransaction.class))
+					.saveToCassandra();
 		}
-
-		CustomerTransactionCounter customerTransactionCounter = new CustomerTransactionCounter();
-		MerchantTransactionCounter merchantTransactionCounter = new MerchantTransactionCounter();
-		DailyTransactionCounter dailyTransactionCounter = new DailyTransactionCounter();
-
-		customerTransactionCounter.setCustomerid(Long.parseLong(record.get("customerId").toString()));
-		merchantTransactionCounter.setMerchantid(Long.parseLong(record.get("merchantId").toString()));
-		dailyTransactionCounter.setDate(sdf.format(cal.getTime()));
-
-		if (transaction.getStatus().equalsIgnoreCase("SUCCESS")) {
-			customerTransactionCounter.setOrdersuccesscounter(1l);
-			merchantTransactionCounter.setOrdersuccesscounter(1l);
-			dailyTransactionCounter.setOrdersuccesscounter(1l);
-		} else {
-			customerTransactionCounter.setOrdercancelcounter(1l);
-			merchantTransactionCounter.setOrdercancelcounter(1l);
-			dailyTransactionCounter.setOrdercancelcounter(1l);
-		}
-
-		if (transaction.getInvoiceamount() <= 500) {
-			customerTransactionCounter.setOrderbelow500(1l);
-			merchantTransactionCounter.setOrderbelow500(1l);
-			dailyTransactionCounter.setOrderbelow500(1l);
-		} else if (transaction.getInvoiceamount() > 500 && transaction.getInvoiceamount() <= 1000) {
-			customerTransactionCounter.setOrderbelow1000(1l);
-			merchantTransactionCounter.setOrderbelow1000(1l);
-			dailyTransactionCounter.setOrderbelow1000(1l);
-		} else if (transaction.getInvoiceamount() > 1000 && transaction.getInvoiceamount() < 2000) {
-			customerTransactionCounter.setOrderbelow2000(1l);
-			merchantTransactionCounter.setOrderbelow2000(1l);
-			dailyTransactionCounter.setOrderbelow2000(1l);
-		} else {
-			customerTransactionCounter.setOrderabove2000(1l);
-			merchantTransactionCounter.setOrderabove2000(1l);
-			dailyTransactionCounter.setOrderabove2000(1l);
-		}
-
-		BankMerchantTransaction bankMerchantTransaction = new BankMerchantTransaction(bank, transaction.getMerchantid(),
-				transaction.getInvoiceamount(), 0l, transaction.getSegment(), cal.get(Calendar.YEAR),
-				cal.get(Calendar.MONTH));
-
-		CassandraTableScanJavaRDD<CassandraRow> bankMerchantDetails = javaFunctions(jsc)
-				.cassandraTable("capstone", "bank_merchant_transaction")
-				.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH) + " and bank = '"
-						+ bankMerchantTransaction.getBank() + "' and merchantid="
-						+ bankMerchantTransaction.getMerchantid() + " and segment='"
-						+ bankMerchantTransaction.getSegment() + "'");
-		float amount = 0f;
-		Long orderCount = 0l;
-
-		if (bankMerchantDetails.count() > 0) {
-			amount = bankMerchantDetails.first().getFloat("totalamount");
-			orderCount = bankMerchantDetails.first().getLong("ordercount");
-		}
-
-		bankMerchantTransaction.setTotalamount(amount + bankMerchantTransaction.getTotalamount());
-		bankMerchantTransaction.setOrdercount(orderCount + 1);
-
-		javaFunctions(jsc.parallelize(Arrays.asList(bankMerchantTransaction)))
-				.writerBuilder("capstone", "bank_merchant_transaction", mapToRow(BankMerchantTransaction.class))
-				.saveToCassandra();
-
-		javaFunctions(jsc.parallelize(Arrays.asList(customerTransactionCounter)))
-				.writerBuilder("capstone", "customer_transaction", mapToRow(CustomerTransactionCounter.class))
-				.saveToCassandra();
-
-		javaFunctions(jsc.parallelize(Arrays.asList(merchantTransactionCounter)))
-				.writerBuilder("capstone", "merchant_transaction", mapToRow(MerchantTransactionCounter.class))
-				.saveToCassandra();
-
-		javaFunctions(jsc.parallelize(Arrays.asList(dailyTransactionCounter)))
-				.writerBuilder("capstone", "daily_transaction", mapToRow(DailyTransactionCounter.class))
-				.saveToCassandra();
-
-		CassandraTableScanJavaRDD<CassandraRow> customerGenderDetails = javaFunctions(jsc)
-				.cassandraTable("capstone", "customer").where("customerid = " + transaction.getCustomerid());
-		String gender = null;
-		if (customerGenderDetails.count() > 0) {
-			gender = customerGenderDetails.first().getString("gender");
-		}
-
-		MerchantGenderTransaction merchantGenderTransaction = new MerchantGenderTransaction(
-				bankMerchantTransaction.getYear(), bankMerchantTransaction.getMonth(),
-				bankMerchantTransaction.getMerchantid(), transaction.getInvoiceamount(), gender);
-
-		CassandraTableScanJavaRDD<CassandraRow> merchantCustomerGenderDetails = javaFunctions(jsc)
-				.cassandraTable("capstone", "merchant_gender_transaction")
-				.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH) + " and merchantid="
-						+ bankMerchantTransaction.getMerchantid() + " and gender='" + gender + "'");
-		amount = 0f;
-		if (merchantCustomerGenderDetails.count() > 0) {
-			amount = merchantCustomerGenderDetails.first().getFloat("amount");
-		}
-		merchantGenderTransaction.setAmount(amount + merchantGenderTransaction.getAmount());
-
-		javaFunctions(jsc.parallelize(Arrays.asList(merchantGenderTransaction)))
-				.writerBuilder("capstone", "merchant_gender_transaction", mapToRow(MerchantGenderTransaction.class))
-				.saveToCassandra();
 	}
 
 	public static void main(String[] args) throws InterruptedException {
