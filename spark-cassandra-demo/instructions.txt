@@ -1,6 +1,8 @@
 Start Cassandra Clsuter / Standalone Node
 
 
+drop keyspace capstone;
+
 CREATE KEYSPACE capstone WITH replication = {'class': 'SimpleStrategy','replication_factor': 1}
 
 
