@@ -64,8 +64,8 @@ public class FileUtility {
 					avroRecord.put("customerId", Long.parseLong(split[1]));
 					avroRecord.put("bank", split[2].trim());
 					avroRecord.put("type", split[3].trim());
-					avroRecord.put("valid_month", split[4].trim());
-					avroRecord.put("valid_year", split[5].trim());
+					avroRecord.put("valid_month", Integer.parseInt(split[4].trim()));
+					avroRecord.put("valid_year", Integer.parseInt(split[5].trim()));
 					avroRecord.put("expiryMonth", Integer.parseInt(split[6].trim()));
 					avroRecord.put("expiryYear", Integer.parseInt(split[7].trim()));
 					avroRecord.put("cardNum", split[8].trim());
