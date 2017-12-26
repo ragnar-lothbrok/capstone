@@ -121,6 +121,17 @@ CREATE TABLE merchant_gender_transaction (
 );
 
 
+CREATE TABLE merchant_gender_segment_transaction (
+	year int,
+	month int,
+    merchantid bigint,
+    segment text,
+    gender text,
+    amount float,
+    PRIMARY KEY ((year,month),merchantid,gender)
+);
+
+
 //Not in use
 CREATE TABLE bank_total_transaction (
     date text,

@@ -42,7 +42,7 @@ public class BankMerchantAggregationJob {
 	private static JavaSparkContext javaSparkContext = null;
 
 	public static void main(String[] args) throws ParseException {
-		
+
 		NumberFormat formatter = new DecimalFormat("#0.00");
 
 		Properties prop = FileProperties.properties;
@@ -56,7 +56,7 @@ public class BankMerchantAggregationJob {
 		}
 		conf.setAppName(BankMerchantAggregationJob.class.getSimpleName());
 		conf.set("spark.cassandra.connection.host", prop.get("com.smcc.app.cassandra.host").toString());
-		if(prop.get("spark.cassandra.auth.username") != null) {
+		if (prop.get("spark.cassandra.auth.username") != null) {
 			conf.set("spark.cassandra.auth.username", prop.get("spark.cassandra.auth.username").toString());
 			conf.set("spark.cassandra.auth.password", prop.get("spark.cassandra.auth.password").toString());
 		}
@@ -65,11 +65,12 @@ public class BankMerchantAggregationJob {
 		javaSparkContext = JavaSparkContext.fromSparkContext(SparkContext.getOrCreate(conf));
 
 		SparkContextJavaFunctions functions = CassandraJavaUtil.javaFunctions(javaSparkContext);
-		
+
 		Integer year = Integer.parseInt(prop.get("yearstats").toString());
 
 		JavaRDD<CassandraRow> rdd = null;
 		JavaRDD<CassandraRow> genderRdd = null;
+		JavaRDD<CassandraRow> genderSegmentRdd = null;
 		String months = "";
 		for (int i = 0; i < 12; i++) {
 			if (i == 11) {
@@ -81,18 +82,134 @@ public class BankMerchantAggregationJob {
 
 		rdd = functions.cassandraTable("capstone", "bank_merchant_transaction")
 				.where("year = " + year + " and month in (" + months + ")");
-		
+
 		genderRdd = functions.cassandraTable("capstone", "merchant_gender_transaction")
 				.where("year = " + year + " and month in (" + months + ")");
-		
+
+		genderSegmentRdd = functions.cassandraTable("capstone", "merchant_gender_segment_transaction")
+				.where("year = " + year + " and month in (" + months + ")");
+
 		rdd.cache();
 		genderRdd.cache();
-		
+		genderSegmentRdd.cache();
+
 		Long rddCount = rdd.count();
 		Long rddGenderCount = genderRdd.count();
-		
-		System.out.println("======== rddCount= "+rddCount+" rddGenderAccount = "+rddGenderCount);
+		Long genderSegmentRddCount = genderSegmentRdd.count();
 
+		System.out.println("======== rddCount= " + rddCount + " rddGenderAccount = " + rddGenderCount
+				+ " genderSegmentRddCount = " + genderSegmentRddCount);
+
+		// Top 5 banks name by transaction amount
+		Map<String, Tuple2<Float, Long>> bankTotalAmountMap = topFiveBanksTransaction(rdd);
+
+		// Top 5 merchant by transaction amount
+		List<Long> merchantNameList = topFiveMerchantByTransactionAmount(prop, rdd);
+
+		// Quarterly transaction amount of top 5 merchants
+		JavaRDD<Tuple6<String, Long, Float, Long, String, String>> bankMerchantPairRDD = rdd
+				.map(r -> new Tuple6<String, Long, Float, Long, String, String>(r.getString("bank").toString(),
+						r.getLong("merchantid"), Float.parseFloat(r.getFloat("totalamount").toString()),
+						r.getLong("ordercount"), (r.getInt("month") + 1) + "", r.getString("segment")));
+
+		JavaPairRDD<String, Iterable<Tuple6<String, Long, Float, Long, String, String>>> bankMerchantPairRDDd = bankMerchantPairRDD
+				.groupBy(new Function<Tuple6<String, Long, Float, Long, String, String>, String>() {
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public String call(Tuple6<String, Long, Float, Long, String, String> v1) throws Exception {
+						return v1._1();
+					}
+				});
+
+		bankMerchantPairRDDd.cache();
+
+		// Problem 2
+		topMerchantTxAmountQuarterly(merchantNameList, bankMerchantPairRDD);
+
+		// Problem 3
+		topMerchantSegmentTxAmountMonthly(merchantNameList, bankMerchantPairRDD,
+				Integer.parseInt(prop.get("topSegmentCount").toString()));
+
+		// Problem 1
+		topBanksTopMerchantTxAmount(formatter, topN, bankTotalAmountMap, bankMerchantPairRDDd);
+
+		// Problem 4
+		topMerchantCustomerTxAmountByGender(merchantNameList, genderRdd);
+
+		// Problem 5
+		topMerchantCustomerSegmentTxAmountByGender(merchantNameList, genderSegmentRdd);
+
+	}
+
+	private static void topMerchantCustomerSegmentTxAmountByGender(List<Long> merchantNameList,
+			JavaRDD<CassandraRow> genderSegmentRdd) {
+		List<Tuple2<Integer, Tuple5<Long, Integer, String, Float,String>>> genderWiseTx = genderSegmentRdd
+				.mapToPair(new PairFunction<CassandraRow, Integer, Tuple5<Long, Integer, String, Float,String>>() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public Tuple2<Integer, Tuple5<Long, Integer, String, Float,String>> call(CassandraRow t) throws Exception {
+						return new Tuple2<Integer, Tuple5<Long, Integer, String, Float,String>>(t.getInt("year"),
+								new Tuple5<Long, Integer, String, Float,String>(t.getLong("merchantid"), t.getInt("month"),
+										t.getString("gender"), t.getFloat("amount"),t.getString("segment")));
+					}
+				}).filter(new Function<Tuple2<Integer, Tuple5<Long, Integer, String, Float,String>>, Boolean>() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public Boolean call(Tuple2<Integer, Tuple5<Long, Integer, String, Float,String>> v1) throws Exception {
+						return merchantNameList.contains(v1._2()._1().longValue());
+					}
+				}).collect();
+
+		System.out.println("gender segment WiseTx == " + genderWiseTx);
+	
+	}
+
+	private static List<Long> topFiveMerchantByTransactionAmount(Properties prop, JavaRDD<CassandraRow> rdd) {
+		JavaPairRDD<Long, Float> merchantTxAmountMap = rdd
+				.mapToPair(r -> new Tuple2<Long, Float>(r.getLong("merchantid"),
+						Float.parseFloat(r.getFloat("totalamount").toString())));
+
+		JavaPairRDD<Long, Float> merchantTxAmountRDD = merchantTxAmountMap
+				.reduceByKey(new Function2<Float, Float, Float>() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public Float call(Float v1, Float v2) throws Exception {
+						return v1 + v2;
+					}
+				});
+
+		Map<Long, Float> merchanttxAmountMap = merchantTxAmountRDD.collectAsMap();
+
+		List<Entry<Long, Float>> merchantAmountList = new ArrayList<>(merchanttxAmountMap.entrySet());
+
+		Collections.sort(merchantAmountList, Comparator3.INSTANCE);
+
+		List<Long> merchantNameList = merchantAmountList.stream()
+				.map(new java.util.function.Function<Entry<Long, Float>, Long>() {
+					@Override
+					public Long apply(Entry<Long, Float> t) {
+						return t.getKey();
+					}
+				}).limit(Integer.parseInt(prop.get("topmerchantcount").toString())).collect(Collectors.toList());
+
+		System.out.println("TOP 5 Merchant by Transaction Amount => " + merchantNameList);
+		return merchantNameList;
+	}
+
+	/**
+	 * This will give top 5 banks by transaction amount
+	 * 
+	 * @param rdd
+	 * @return
+	 */
+	private static Map<String, Tuple2<Float, Long>> topFiveBanksTransaction(JavaRDD<CassandraRow> rdd) {
 		JavaPairRDD<String, Tuple2<Float, Long>> pairRDD = rdd.mapToPair(
 				r -> new Tuple2<String, Tuple2<Float, Long>>(r.getString("bank").toString(), new Tuple2<Float, Long>(
 						Float.parseFloat(r.getFloat("totalamount").toString()), r.getLong("ordercount"))));
@@ -126,90 +243,33 @@ public class BankMerchantAggregationJob {
 				}).collect(Collectors.toList());
 
 		System.out.println("TOP 5 Banks by Transaction => " + topMerchantByTransaction);
-
-		JavaPairRDD<Long, Float> merchantTxAmountMap = rdd
-				.mapToPair(r -> new Tuple2<Long, Float>(r.getLong("merchantid"),
-						Float.parseFloat(r.getFloat("totalamount").toString())));
-
-		JavaPairRDD<Long, Float> merchantTxAmountRDD = merchantTxAmountMap
-				.reduceByKey(new Function2<Float, Float, Float>() {
-
-					private static final long serialVersionUID = 1L;
-
-					@Override
-					public Float call(Float v1, Float v2) throws Exception {
-						return v1 + v2;
-					}
-				});
-
-		Map<Long, Float> merchanttxAmountMap = merchantTxAmountRDD.collectAsMap();
-
-		List<Entry<Long, Float>> merchantAmountList = new ArrayList<>(merchanttxAmountMap.entrySet());
-
-		Collections.sort(merchantAmountList, Comparator3.INSTANCE);
-
-		List<Long> merchantNameList = merchantAmountList.stream()
-				.map(new java.util.function.Function<Entry<Long, Float>, Long>() {
-					@Override
-					public Long apply(Entry<Long, Float> t) {
-						return t.getKey();
-					}
-				}).limit(Integer.parseInt(prop.get("topmerchantcount").toString())).collect(Collectors.toList());
-
-		System.out.println("TOP 5 Merchant by Transaction Amount => " + merchantNameList);
-
-		// Quarterly transaction amount of top 5 merchants
-
-		JavaRDD<Tuple6<String, Long, Float, Long, String, String>> bankMerchantPairRDD = rdd
-				.map(r -> new Tuple6<String, Long, Float, Long, String, String>(r.getString("bank").toString(),
-						r.getLong("merchantid"), Float.parseFloat(r.getFloat("totalamount").toString()),
-						r.getLong("ordercount"), (r.getInt("month") + 1) + "", r.getString("segment")));
-
-		JavaPairRDD<String, Iterable<Tuple6<String, Long, Float, Long, String, String>>> bankMerchantPairRDDd = bankMerchantPairRDD
-				.groupBy(new Function<Tuple6<String, Long, Float, Long, String, String>, String>() {
-					private static final long serialVersionUID = 1L;
-
-					@Override
-					public String call(Tuple6<String, Long, Float, Long, String, String> v1) throws Exception {
-						return v1._1();
-					}
-				});
-
-		bankMerchantPairRDDd.cache();
-
-		topMerchantTxAmountQuarterly(merchantNameList, bankMerchantPairRDD);
-
-		topMerchantSegmentTxAmountMonthly(merchantNameList, bankMerchantPairRDD,
-				Integer.parseInt(prop.get("topSegmentCount").toString()));
-
-		topBanksTopMerchantTxAmount(formatter, topN, bankTotalAmountMap, bankMerchantPairRDDd);
-
-		topMerchantCustomerTxAmountByGender(merchantNameList, genderRdd);
-
+		return bankTotalAmountMap;
 	}
 
 	private static void topMerchantCustomerTxAmountByGender(List<Long> merchantNameList,
 			JavaRDD<CassandraRow> genderRdd) {
-		List<Tuple2<Integer, Tuple4<Long, Integer,String, Float>>> genderWiseTx = genderRdd.mapToPair(new PairFunction<CassandraRow, Integer, Tuple4<Long, Integer,String, Float>>() {
+		List<Tuple2<Integer, Tuple4<Long, Integer, String, Float>>> genderWiseTx = genderRdd
+				.mapToPair(new PairFunction<CassandraRow, Integer, Tuple4<Long, Integer, String, Float>>() {
 
-			private static final long serialVersionUID = 1L;
+					private static final long serialVersionUID = 1L;
 
-			@Override
-			public Tuple2<Integer, Tuple4<Long, Integer,String, Float>> call(CassandraRow t) throws Exception {
-				return new Tuple2<Integer, Tuple4<Long, Integer,String, Float>>(t.getInt("year"), new Tuple4<Long, Integer,String, Float>(t.getLong("merchantid"), t.getInt("month"),t.getString("gender"), t.getFloat("amount")));
-			}
-		}).filter(new Function<Tuple2<Integer,Tuple4<Long, Integer,String, Float>>, Boolean>() {
-			
-			private static final long serialVersionUID = 1L;
+					@Override
+					public Tuple2<Integer, Tuple4<Long, Integer, String, Float>> call(CassandraRow t) throws Exception {
+						return new Tuple2<Integer, Tuple4<Long, Integer, String, Float>>(t.getInt("year"),
+								new Tuple4<Long, Integer, String, Float>(t.getLong("merchantid"), t.getInt("month"),
+										t.getString("gender"), t.getFloat("amount")));
+					}
+				}).filter(new Function<Tuple2<Integer, Tuple4<Long, Integer, String, Float>>, Boolean>() {
 
-			@Override
-			public Boolean call(Tuple2<Integer, Tuple4<Long, Integer,String, Float>> v1) throws Exception {
-				return merchantNameList.contains(v1._2()._1().longValue());
-			}
-		}).collect();
-		
-		System.out.println("genderWiseTx == "+genderWiseTx);
-		System.out.println();
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public Boolean call(Tuple2<Integer, Tuple4<Long, Integer, String, Float>> v1) throws Exception {
+						return merchantNameList.contains(v1._2()._1().longValue());
+					}
+				}).collect();
+
+		System.out.println("genderWiseTx == " + genderWiseTx);
 	}
 
 	// bank merchantid totalamount ordercount date segment
@@ -217,7 +277,7 @@ public class BankMerchantAggregationJob {
 			JavaRDD<Tuple6<String, Long, Float, Long, String, String>> bankMerchantPairRDD,
 			final Integer topSegmentCount) {
 
-		JavaRDD<Tuple2<Long, List<Tuple2<String, List<Tuple2<String, Float>>>>>> merchantSegmentTxAmountMonthly = bankMerchantPairRDD
+		JavaPairRDD<Long, Iterable<Tuple4<Long, String, String, Float>>> merchantSegmentTxAmountMonthly = bankMerchantPairRDD
 				.filter(new Function<Tuple6<String, Long, Float, Long, String, String>, Boolean>() {
 
 					private static final long serialVersionUID = 1L;
@@ -245,7 +305,9 @@ public class BankMerchantAggregationJob {
 					public Long call(Tuple4<Long, String, String, Float> v1) throws Exception {
 						return v1._1();
 					}
-				})
+				});
+
+		JavaRDD<Tuple2<Long, List<Tuple2<String, List<Tuple2<String, Float>>>>>> merchantSegmentMonthly = merchantSegmentTxAmountMonthly
 				.map(new Function<Tuple2<Long, Iterable<Tuple4<Long, String, String, Float>>>, Tuple2<Long, List<Tuple2<String, List<Tuple2<String, Float>>>>>>() {
 
 					private static final long serialVersionUID = 1L;
@@ -321,7 +383,7 @@ public class BankMerchantAggregationJob {
 				});
 
 		// Top merchant transaction amount quarterly.
-		System.out.println("Top merchantSegmentTxAmountMonthly = " + merchantSegmentTxAmountMonthly.collect());
+		System.out.println("Top merchantSegmentTxAmountMonthly = " + merchantSegmentMonthly.collect());
 	}
 
 	private static List<String> topSegmentForMerchant(final Integer topSegmentCount,

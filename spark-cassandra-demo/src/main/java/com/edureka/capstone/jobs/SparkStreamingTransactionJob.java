@@ -35,6 +35,7 @@ import com.edureka.capstone.BankMerchantTransaction;
 import com.edureka.capstone.CustomerTransactionCounter;
 import com.edureka.capstone.DailyTransactionCounter;
 import com.edureka.capstone.FileProperties;
+import com.edureka.capstone.MerchantGenderSegmentTransaction;
 import com.edureka.capstone.MerchantGenderTransaction;
 import com.edureka.capstone.MerchantTransactionCounter;
 import com.edureka.capstone.OrderTransaction;
@@ -104,12 +105,12 @@ public class SparkStreamingTransactionJob {
 
 		long count = txDetails.count();
 
-		LOGGER.info("count = {} " , count);
+		LOGGER.info("count = {} ", count);
 
 		if (count <= 0) {
 			List<OrderTransaction> transactionList = Arrays.asList(transaction);
 
-			LOGGER.info("transactionList = {} " , transactionList);
+			LOGGER.info("transactionList = {} ", transactionList);
 
 			JavaRDD<OrderTransaction> newRDD = jsc.parallelize(transactionList);
 
@@ -221,6 +222,26 @@ public class SparkStreamingTransactionJob {
 
 			javaFunctions(jsc.parallelize(Arrays.asList(merchantGenderTransaction)))
 					.writerBuilder("capstone", "merchant_gender_transaction", mapToRow(MerchantGenderTransaction.class))
+					.saveToCassandra();
+
+			MerchantGenderSegmentTransaction merchantGenderSegmentTransaction = new MerchantGenderSegmentTransaction(
+					bankMerchantTransaction.getYear(), bankMerchantTransaction.getMonth(),
+					bankMerchantTransaction.getMerchantid(), transaction.getInvoiceamount(), gender,
+					transaction.getSegment());
+
+			CassandraTableScanJavaRDD<CassandraRow> merchantGenderSegmentTransactionDetails = javaFunctions(jsc)
+					.cassandraTable("capstone", "merchant_gender_segment_transaction")
+					.where("year=" + cal.get(Calendar.YEAR) + " and month=" + cal.get(Calendar.MONTH)
+							+ " and merchantid=" + merchantGenderSegmentTransaction.getMerchantid() + " and gender='"
+							+ gender + "' and segment='" + merchantGenderSegmentTransaction.getSegment() + "'");
+			amount = 0f;
+			if (merchantGenderSegmentTransactionDetails.count() > 0) {
+				amount = merchantGenderSegmentTransactionDetails.first().getFloat("amount");
+			}
+			merchantGenderSegmentTransaction.setAmount(amount + merchantGenderSegmentTransaction.getAmount());
+
+			javaFunctions(jsc.parallelize(Arrays.asList(merchantGenderSegmentTransaction))).writerBuilder("capstone",
+					"merchant_gender_segment_transaction", mapToRow(MerchantGenderSegmentTransaction.class))
 					.saveToCassandra();
 		}
 	}
