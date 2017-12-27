@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
+import javax.validation.ValidationProviderResolver;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -23,6 +25,7 @@ public class FileUtility {
 
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 	private static SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd");
+	private static SimpleDateFormat sdf3 = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
 	public static void readFile(String filePath, String schemaFilePath, String topic,
 			EventProducerApi eventProducerApi) {
@@ -55,6 +58,11 @@ public class FileUtility {
 						avroRecord.put("timestamp", sdf.parse(split[3]).getTime());
 					} catch (ParseException e) {
 						logger.error("Exception occured while parsing date = {} e = {}  ", split[3], e);
+						try {
+							avroRecord.put("timestamp", sdf3.parse(split[3]).getTime());
+						} catch (ParseException e1) {
+							logger.error("Exception occured while parsing date = {} e = {}  ", split[3], e);
+						}
 					}
 					avroRecord.put("invoiceNum", split[4].trim());
 					avroRecord.put("invoiceAmount", Float.parseFloat(split[5]));

@@ -185,3 +185,23 @@ https://archive.apache.org/dist/kafka/0.8.2.1/kafka_2.11-0.8.2.1.tgz
 spark-submit  --class com.edureka.capstone.jobs.SparkStreamingMerchantJob /Users/raghugupta/Documents/gitrepo/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
 spark-submit  --class com.edureka.capstone.jobs.SparkStreamingCustomerJob /Users/raghugupta/Documents/gitrepo/capstone/spark-cassandra-demo/target/spark-cassandra-demo-0.0.1-SNAPSHOT-jar-with-dependencies.jar 
+
+
+
+
+
+HIVE
+
+http://hive.praveendeshmane.co.in/hive/hive-2-1-0-installation-with-mysql-database-on-ubuntu-14-04.jsp
+
+bin/hdfs dfs -mkdir /customer/
+bin/hdfs dfs -mkdir /merchant/
+bin/hdfs dfs -mkdir /card/
+bin/hdfs dfs -mkdir /transaction/
+
+
+
+CREATE EXTERNAL TABLE IF NOT EXISTS customer(customerid BIGINT, name STRING, mobilenumber STRING, gender STRING, birthdate STRING,email STRING,address STRING,state STRING,country STRING,pincode BIGINT,title STRING,martial_status STRING,created STRING) COMMENT 'Customer Detail' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/customer';
+CREATE EXTERNAL TABLE IF NOT EXISTS transaction(transactionid STRING, customerid BIGINT, merchantid BIGINT, tx_timestamp STRING,invoicenumber STRING,invoiceamount DOUBLE,segment STRING) COMMENT 'Transaction details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/transaction';
+CREATE EXTERNAL TABLE IF NOT EXISTS card(cardid BIGINT,customerid BIGINT, bank STRING, type STRING, valid_month INT, valid_year INT, expirymonth INT, expiryyear INT,cardnum String, cardlimit double) COMMENT 'Card Details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/card';
+CREATE EXTERNAL TABLE IF NOT EXISTS merchant(merchantid BIGINT, taxregnum STRING,merchantname String, mobilenumber STRING,startdate STRING, email STRING,address STRING,state STRING,country STRING,pincode BIGINT,description STRING,longlat STRING) COMMENT 'Merchant details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/merchant';
