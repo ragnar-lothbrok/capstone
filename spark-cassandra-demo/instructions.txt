@@ -54,7 +54,7 @@ CREATE TABLE merchant (
 
 
 CREATE TABLE capstone.order_transaction (
-    transactionid bigint PRIMARY KEY,
+    transactionid text PRIMARY KEY,
     customerid bigint,
     invoiceamount float,
     invoicenumber text,
@@ -200,8 +200,55 @@ bin/hdfs dfs -mkdir /card/
 bin/hdfs dfs -mkdir /transaction/
 
 
+bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/transaction.csv hdfs://localhost:9000/transaction/
+bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/card.csv hdfs://localhost:9000/card/
+bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/merchant.csv hdfs://localhost:9000/merchant/
+bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/customer.csv  hdfs://localhost:9000/customer/
+
 
 CREATE EXTERNAL TABLE IF NOT EXISTS customer(customerid BIGINT, name STRING, mobilenumber STRING, gender STRING, birthdate STRING,email STRING,address STRING,state STRING,country STRING,pincode BIGINT,title STRING,martial_status STRING,created STRING) COMMENT 'Customer Detail' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/customer';
 CREATE EXTERNAL TABLE IF NOT EXISTS transaction(transactionid STRING, customerid BIGINT, merchantid BIGINT, tx_timestamp STRING,invoicenumber STRING,invoiceamount DOUBLE,segment STRING) COMMENT 'Transaction details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/transaction';
 CREATE EXTERNAL TABLE IF NOT EXISTS card(cardid BIGINT,customerid BIGINT, bank STRING, type STRING, valid_month INT, valid_year INT, expirymonth INT, expiryyear INT,cardnum String, cardlimit double) COMMENT 'Card Details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/card';
 CREATE EXTERNAL TABLE IF NOT EXISTS merchant(merchantid BIGINT, taxregnum STRING,merchantname String, mobilenumber STRING,startdate STRING, email STRING,address STRING,state STRING,country STRING,pincode BIGINT,description STRING,longlat STRING) COMMENT 'Merchant details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/merchant';
+
+
+
+
+Problem 1 :
+
+select c.bank,sum(t.invoiceamount) as total ,count(*) as totalOrder from transaction t join card c where c.customerid=t.customerid group by c.bank order by c.bank, total desc;
+
+select c.bank,t.merchantid,t.invoiceamount from transaction t join card c where c.customerid=t.customerid group by c.bank,t.merchantid,t.invoiceamount  order by t.invoiceamount desc;
+
+
+select t1.bank,sum(t1.amount) from (select c.bank as bank,t.invoiceamount as amount from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" order by t.invoiceamount desc limit 10) temp t1;
+
+
+
+
+select c.bank,t.invoiceamount,t.transactionid from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by c.bank,t.invoiceamount,t.transactionid order by t.invoiceamount desc limit 10;
+select c.bank,t.invoiceamount from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Goldman Sachs\"" group by c.bank,t.invoiceamount order by t.invoiceamount desc limit 10;
+
+
+
+select temp.bank, sum(amount),count(*) from transaction t1 join (select t.merchantid as merchantid, sum(t.invoiceamount) as amount,t.transactionid as transactionid from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid,t.invoiceamount,t.transactionid order by t.invoiceamount desc limit 10) temp on temp.transactionid=t1.transactionid group by temp.bank
+
+
+select t.merchantid as merchantid, sum(t.invoiceamount) as amount from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid
+
+
+select t.merchantid from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid order by amount desc limit 10;
+
+
+https://www.cloudera.com/documentation/enterprise/5-2-x/topics/cdh_ig_ports_cdh5.html
+
+hadoop fs -ls hdfs://ip-20-0-21-147.ec2.internal:8020/
+
+
+hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/apps/map-reduce
+
+hadoop fs -put workflow.xml hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/apps/map-reduce
+
+hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/input-data/text
+
+hadoop fs -mkdir hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/apps/map-reduce/lib
