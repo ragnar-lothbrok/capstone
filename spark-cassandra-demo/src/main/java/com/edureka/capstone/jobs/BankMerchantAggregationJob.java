@@ -165,7 +165,7 @@ public class BankMerchantAggregationJob {
 					}
 				}).collect();
 
-		System.out.println("gender segment WiseTx == " + genderWiseTx);
+		System.out.println("Problem 5 gender segment WiseTx == " + genderWiseTx);
 	
 	}
 
@@ -269,7 +269,7 @@ public class BankMerchantAggregationJob {
 					}
 				}).collect();
 
-		System.out.println("genderWiseTx == " + genderWiseTx);
+		System.out.println("Problem 4 genderWiseTx == " + genderWiseTx);
 	}
 
 	// bank merchantid totalamount ordercount date segment
@@ -383,7 +383,7 @@ public class BankMerchantAggregationJob {
 				});
 
 		// Top merchant transaction amount quarterly.
-		System.out.println("Top merchantSegmentTxAmountMonthly = " + merchantSegmentMonthly.collect());
+		System.out.println("Problem 3 Top merchantSegmentTxAmountMonthly = " + merchantSegmentMonthly.collect());
 	}
 
 	private static List<String> topSegmentForMerchant(final Integer topSegmentCount,
@@ -436,18 +436,50 @@ public class BankMerchantAggregationJob {
 					public Iterator<Tuple5<String, String, Long, String, Long>> call(
 							Tuple2<String, Iterable<Tuple6<String, Long, Float, Long, String, String>>> t)
 							throws Exception {
-						List<Tuple6<String, Long, Float, Long, String, String>> list = Lists.newArrayList(t._2);
-						Collections.sort(list, MyTupleComparator.INSTANCE);
+						
+						List<Tuple3<Long, Float, Long>>  merchantAggregationList = javaSparkContext.parallelize(Lists.newArrayList(t._2)).groupBy(new Function<Tuple6<String,Long,Float,Long,String,String>, Long>() {
 
-						list = list.stream().limit(topN).collect(Collectors.toList());
+							private static final long serialVersionUID = 1L;
+
+							@Override
+							public Long call(Tuple6<String, Long, Float, Long, String, String> v1) throws Exception {
+								// TODO Auto-generated method stub
+								return v1._2();
+							}
+						}).map(new Function<Tuple2<Long,Iterable<Tuple6<String,Long,Float,Long,String,String>>>, Tuple3<Long, Float, Long>>() {
+
+							private static final long serialVersionUID = 1L;
+
+							@Override
+							public Tuple3<Long, Float, Long> call(
+									Tuple2<Long, Iterable<Tuple6<String, Long, Float, Long, String, String>>> v1)
+									throws Exception {
+								List<Tuple6<String, Long, Float, Long, String, String>> merchantTransactionList = Lists.newArrayList(v1._2());
+								Float totalAmount = 0.0f;
+								Long totalOrders = 0l;
+								Long merchantId = 0l;
+								for(Tuple6<String, Long, Float, Long, String, String> tuple : merchantTransactionList) {
+									totalAmount += tuple._3();
+									totalOrders += tuple._4();
+									merchantId = tuple._2();
+								}
+								return new Tuple3<Long, Float, Long>(merchantId,totalAmount,totalOrders);
+							}
+						}).collect();
+						
+						merchantAggregationList = new ArrayList<>(merchantAggregationList);
+						
+						Collections.sort(merchantAggregationList, MyTupleComparator.INSTANCE);
+
+						merchantAggregationList = merchantAggregationList.stream().limit(topN).collect(Collectors.toList());
 
 						Float amount = 0.0f;
 
 						Long topMerchantsOrder = 0l;
 
-						for (Tuple6<String, Long, Float, Long, String, String> tuple : list) {
-							amount += tuple._3();
-							topMerchantsOrder += tuple._4();
+						for (Tuple3<Long, Float, Long> tuple : merchantAggregationList) {
+							amount += tuple._2();
+							topMerchantsOrder += tuple._3();
 						}
 
 						Tuple2<Float, Long> amountOrderTuple = bankTotalAmountMap.get(t._1);
@@ -462,7 +494,8 @@ public class BankMerchantAggregationJob {
 		// Bank Total Transaction Value (in 2016) Total Transaction Count (in 2016)
 		// Transaction Contribution of top 10 Merchants (2016) Total Transaction Count
 		// by top 10 Merchants(2016)
-		System.out.println("Output = " + finalAnswer.collect());
+		System.out.println("Problem 1 = " + finalAnswer.collect());
+		System.out.println();
 	}
 
 	private static void topMerchantTxAmountQuarterly(List<Long> merchantNameList,
@@ -521,19 +554,19 @@ public class BankMerchantAggregationJob {
 				});
 
 		// Top merchant transaction amount quarterly.
-		System.out.println("Top merchant amount quarterly = " + merchantTxAmountQuarterly.collect());
+		System.out.println("Problem 2 Top merchant amount quarterly = " + merchantTxAmountQuarterly.collect());
 	}
 
 	static class MyTupleComparator
-			implements Comparator<Tuple6<String, Long, Float, Long, String, String>>, Serializable {
+			implements Comparator<Tuple3<Long, Float, Long>>, Serializable {
 
 		private static final long serialVersionUID = 1L;
 		final static MyTupleComparator INSTANCE = new MyTupleComparator();
 
 		@Override
-		public int compare(Tuple6<String, Long, Float, Long, String, String> o1,
-				Tuple6<String, Long, Float, Long, String, String> o2) {
-			return -o1._3().compareTo(o2._3());
+		public int compare(Tuple3<Long, Float, Long> o1,
+				Tuple3<Long, Float, Long> o2) {
+			return -o1._2().compareTo(o2._2());
 		}
 
 	}
