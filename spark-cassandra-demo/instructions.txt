@@ -200,14 +200,34 @@ bin/hdfs dfs -mkdir /card/
 bin/hdfs dfs -mkdir /transaction/
 
 
+hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/customer/
+hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/merchant/
+hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/card/
+hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/transaction/
+
+
+hadoop fs -put transaction.csv  hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/transaction/
+hadoop fs -put card.csv hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/card/
+hadoop fs -put merchant.csv  hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/merchant/
+hadoop fs -put customer.csv  hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/customer/
+
+
+CREATE EXTERNAL TABLE IF NOT EXISTS customer(customerid BIGINT, name STRING, mobilenumber STRING, gender STRING, title STRING,martial_status STRING,birthdate STRING,email STRING,address STRING,state STRING,country STRING,pincode BIGINT,created STRING) COMMENT 'Customer Detail' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/user/edureka_339659/customer';
+CREATE EXTERNAL TABLE IF NOT EXISTS transaction(transactionid STRING, customerid BIGINT, merchantid BIGINT, tx_timestamp STRING,invoicenumber STRING,invoiceamount DOUBLE,segment STRING) COMMENT 'Transaction details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/user/edureka_339659/transaction';
+CREATE EXTERNAL TABLE IF NOT EXISTS card(cardid BIGINT,customerid BIGINT, bank STRING, type STRING, valid_month INT, valid_year INT, expirymonth INT, expiryyear INT,cardnum String, cardlimit double) COMMENT 'Card Details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/user/edureka_339659/card';
+CREATE EXTERNAL TABLE IF NOT EXISTS merchant(merchantid BIGINT, taxregnum STRING,merchantname String, mobilenumber STRING,startdate STRING, email STRING,address STRING,state STRING,country STRING,pincode BIGINT,description STRING,longlat STRING) COMMENT 'Merchant details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/user/edureka_339659/merchant';
+
 bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/transaction.csv hdfs://localhost:9000/transaction/
 bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/card.csv hdfs://localhost:9000/card/
 bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/merchant.csv hdfs://localhost:9000/merchant/
 bin/hdfs dfs -put -f /Users/raghugupta/Documents/Capstone/customer.csv  hdfs://localhost:9000/customer/
 
 
-CREATE EXTERNAL TABLE IF NOT EXISTS customer(customerid BIGINT, name STRING, mobilenumber STRING, gender STRING, birthdate STRING,email STRING,address STRING,state STRING,country STRING,pincode BIGINT,title STRING,martial_status STRING,created STRING) COMMENT 'Customer Detail' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/customer';
-CREATE EXTERNAL TABLE IF NOT EXISTS transaction(transactionid STRING, customerid BIGINT, merchantid BIGINT, tx_timestamp STRING,invoicenumber STRING,invoiceamount DOUBLE,segment STRING) COMMENT 'Transaction details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/transaction';
+
+
+
+CREATE EXTERNAL TABLE IF NOT EXISTS customer(customerid BIGINT, name STRING, mobilenumber STRING, gender STRING, title STRING,martial_status STRING,birthdate STRING,email STRING,address STRING,state STRING,country STRING,pincode BIGINT,created STRING) COMMENT 'Customer Detail' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/customer';
+CREATE EXTERNAL TABLE IF NOT EXISTS transaction(transactionid STRING, customerid BIGINT, merchantid BIGINT, tx_timestamp STRING,invoicenumber STRING,invoiceamount DOUBLE,segment STRING) COMMENT 'Transaction details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/transaction' tblproperties ("skip.header.line.count"="1");
 CREATE EXTERNAL TABLE IF NOT EXISTS card(cardid BIGINT,customerid BIGINT, bank STRING, type STRING, valid_month INT, valid_year INT, expirymonth INT, expiryyear INT,cardnum String, cardlimit double) COMMENT 'Card Details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/card';
 CREATE EXTERNAL TABLE IF NOT EXISTS merchant(merchantid BIGINT, taxregnum STRING,merchantname String, mobilenumber STRING,startdate STRING, email STRING,address STRING,state STRING,country STRING,pincode BIGINT,description STRING,longlat STRING) COMMENT 'Merchant details' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/merchant';
 
@@ -234,7 +254,7 @@ select c.bank,t.invoiceamount from transaction t join card c where c.customerid=
 select temp.bank, sum(amount),count(*) from transaction t1 join (select t.merchantid as merchantid, sum(t.invoiceamount) as amount,t.transactionid as transactionid from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid,t.invoiceamount,t.transactionid order by t.invoiceamount desc limit 10) temp on temp.transactionid=t1.transactionid group by temp.bank
 
 
-select t.merchantid as merchantid, sum(t.invoiceamount) as amount from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid
+select sum(amount) as totalTxAmount,sum(orderCount) as totalOrderCount from (select t.merchantid as merchantid, sum(t.invoiceamount) as amount,count(*) as orderCount from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid order by amount limit 10) t1;
 
 
 select t.merchantid from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid order by amount desc limit 10;
@@ -251,4 +271,25 @@ hadoop fs -put workflow.xml hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka
 
 hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/input-data/text
 
-hadoop fs -mkdir hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/apps/map-reduce/lib
+hadoop fs -mkdir -p hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/apps/map-reduce/lib
+
+hadoop fs -put target/casestudy-hadoop-mr-one-0.0.1-SNAPSHOT.jar hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/apps/map-reduce/lib
+
+hadoop fs -put transaction.csv hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/input-data/text
+
+
+oozie job -oozie http://ip-20-0-21-4.ec2.internal:11000/oozie -config job.properties -run
+
+
+hadoop fs -put job.properties hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/apps/
+
+hadoop fs -ls hdfs://ip-20-0-21-147.ec2.internal:8020/user/edureka_339659/examples/output-data/
+
+
+oozie job -oozie http://ip-20-0-21-4.ec2.internal:11000 -info 0000026-171221010930272-oozie-oozi-W
+oozie job -oozie http://ip-20-0-21-4.ec2.internal:11000 -log 0000026-171221010930272-oozie-oozi-W
+
+
+
+oozie job -oozie http://ip-20-0-31-127.ec2.internal:11000 -log 0000026-171221010930272-oozie-oozi-W
+oozie job -oozie http://ip-20-0-22-9.ec2.internal:11000/oozie -log 0000026-171221010930272-oozie-oozi-W
