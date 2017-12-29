@@ -260,6 +260,14 @@ select sum(amount) as totalTxAmount,sum(orderCount) as totalOrderCount from (sel
 select t.merchantid from transaction t join card c where c.customerid=t.customerid and c.bank= "\"Bank of America\"" group by t.merchantid order by amount desc limit 10;
 
 
+select t.merchantid, MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss')) as month, sum(t.invoiceamount) as amount, count(*) as orderCount from transaction t where YEAR(from_utc_timestamp(tx_timestamp,'yyyy-mm-dd hh:mm:ss'))=2016 group by t.merchantid,MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss')) order by amount desc limit 5;
+
+
+select t.merchantid as merchantid, sum(t.invoiceamount) as amount from transaction t where YEAR(from_utc_timestamp(tx_timestamp,'yyyy-mm-dd hh:mm:ss'))= 2016 group by t.merchantid order by amount desc limit 5
+
+select t.merchantid,t.segment, MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss')) as month, sum(t.invoiceamount) as amount, count(*) as orderCount from transaction t where YEAR(from_utc_timestamp(tx_timestamp,'yyyy-mm-dd hh:mm:ss'))=2016 and t.merchantid in() group by t.merchantid,MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss')) order by amount desc limit 5;
+
+
 https://www.cloudera.com/documentation/enterprise/5-2-x/topics/cdh_ig_ports_cdh5.html
 
 hadoop fs -ls hdfs://ip-20-0-21-147.ec2.internal:8020/

@@ -1,0 +1,25 @@
+mvn clean package
+
+java -jar target/capstone-hive-0.0.1-SNAPSHOT-jar-with-dependencies.jar jdbc:hive2://ip-20-0-21-4.ec2.internal:10000/default;ssl=false
+
+
+java -jar target/capstone-hive-0.0.1-SNAPSHOT-jar-with-dependencies.jar jdbc:hive2://ip-20-0-31-127.ec2.internal:10000/default;ssl=false
+
+
+java -jar target/capstone-hive-0.0.1-SNAPSHOT-jar-with-dependencies.jar jdbc:hive2://ip-20-0-22-9.ec2.internal:10000/default;ssl=false
+
+
+!connect jdbc:hive2://ip-20-0-22-9.ec2.internal:10000/default
+
+
+!connect jdbc:hive2://localhost:10000/default;ssl=false
+
+
+//https://stackoverflow.com/questions/28898936/beeline-not-able-to-connect-to-hiveserver2
+
+
+sudo find / -name hive.log
+
+java -cp "capstone-hive-0.0.1-SNAPSHOT.jar:jars/*" com.edureka.capstone.ProblemOne
+
+bin/hive --service hiveserver2 start
