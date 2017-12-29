@@ -14,10 +14,9 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+public class ProblemFive {
 
-public class ProblemThree {
-
-	private static final Logger logger = LoggerFactory.getLogger(ProblemThree.class);
+	private static final Logger logger = LoggerFactory.getLogger(ProblemFive.class);
 	private static final String JDBC_DRIVER_NAME = "org.apache.hive.jdbc.HiveDriver";
 
 	public static Properties loadProperties(String path) {
@@ -32,13 +31,21 @@ public class ProblemThree {
 		return props;
 	}
 
-	static class MerchantSegmentMonthly {
+	static class MerchantSegmentGenderMonthly {
 		private Long merchant;
 		private String segment;
+		private String gender;
 		private Integer month;
 		private double amount;
 		private Long orderCount;
-		
+
+		public String getSegment() {
+			return segment;
+		}
+
+		public void setSegment(String segment) {
+			this.segment = segment;
+		}
 
 		public Long getOrderCount() {
 			return orderCount;
@@ -64,12 +71,12 @@ public class ProblemThree {
 			this.merchant = merchant;
 		}
 
-		public String getSegment() {
-			return segment;
+		public String getGender() {
+			return gender;
 		}
 
-		public void setSegment(String segment) {
-			this.segment = segment;
+		public void setGender(String gender) {
+			this.gender = gender;
 		}
 
 		public Integer getMonth() {
@@ -82,8 +89,8 @@ public class ProblemThree {
 
 		@Override
 		public String toString() {
-			return "MerchantSegmentMonthly [merchant=" + merchant + ", segment=" + segment + ", month=" + month
-					+ ", amount=" + amount + ", orderCount=" + orderCount + "]";
+			return "MerchantSegmentGenderMonthly [merchant=" + merchant + ", segment=" + segment + ", gender=" + gender
+					+ ", month=" + month + ", amount=" + amount + ", orderCount=" + orderCount + "]";
 		}
 
 	}
@@ -98,13 +105,14 @@ public class ProblemThree {
 			merchantIdsStr = merchantIdsStr.substring(0, merchantIdsStr.length() - 1);
 		}
 
-		String query = "select t.merchantid as merchantid,t.segment as segment, MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss')) as month, sum(t.invoiceamount) as amount, count(*) as orderCount from transaction t where YEAR(from_utc_timestamp(tx_timestamp,'yyyy-mm-dd hh:mm:ss'))= "
-				+ Integer.parseInt(props.get("hive.problemone.year").toString())
-				+ " and t.merchantid in("+merchantIdsStr+") group by t.merchantid,t.segment,MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss'))";
-		
+		String query = "select t.merchantid as merchantid,t.segment as segment, c.gender as gender , MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss')) as month, sum(t.invoiceamount) as amount, count(*) as orderCount from transaction t join customer c on t.customerid=c.customerid where YEAR(from_utc_timestamp(tx_timestamp,'yyyy-mm-dd hh:mm:ss'))= "
+				+ Integer.parseInt(props.get("hive.problemone.year").toString()) + " and t.merchantid in("
+				+ merchantIdsStr
+				+ ") group by t.merchantid,t.segment,c.gender,MONTH(from_utc_timestamp(t.tx_timestamp,'yyyy-mm-dd hh:mm:ss')) order by amount desc";
+
 		Connection con = null;
 		ResultSet rs = null;
-		List<MerchantSegmentMonthly> list = new ArrayList<MerchantSegmentMonthly>();
+		List<MerchantSegmentGenderMonthly> list = new ArrayList<MerchantSegmentGenderMonthly>();
 		try {
 			Class.forName(JDBC_DRIVER_NAME);
 			con = DriverManager.getConnection(props.get("hive.url").toString(), props.get("hive.username").toString(),
@@ -112,9 +120,10 @@ public class ProblemThree {
 			Statement stmt = con.createStatement();
 			rs = stmt.executeQuery(query);
 			while (rs.next()) {
-				MerchantSegmentMonthly merchantSegmentMonthly = new MerchantSegmentMonthly();
+				MerchantSegmentGenderMonthly merchantSegmentMonthly = new MerchantSegmentGenderMonthly();
 				merchantSegmentMonthly.setMerchant(rs.getLong("merchantid"));
 				merchantSegmentMonthly.setSegment(rs.getString("segment"));
+				merchantSegmentMonthly.setGender(rs.getString("gender"));
 				merchantSegmentMonthly.setMonth(rs.getInt("month"));
 				merchantSegmentMonthly.setAmount(rs.getDouble("amount"));
 				merchantSegmentMonthly.setOrderCount(rs.getLong("orderCount"));
@@ -135,7 +144,7 @@ public class ProblemThree {
 			}
 		}
 
-		logger.info("Monthly wise merchant segment stats = {} ", list);
+		logger.info("Monthly wise merchant segment gender stats = {} ", list);
 	}
 
 	public static void main(String[] args) {
@@ -153,7 +162,7 @@ public class ProblemThree {
 			System.setProperty("mapreduce.framework.name", "local");
 			System.setProperty("mapreduce.jobtracker.address", "localhost:9001");
 		}
-		// ProblemOne.setTransactionTable(props);
+		ProblemOne.setTransactionTable(props);
 		solveProblem(props);
 		System.exit(1);
 	}
