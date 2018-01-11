@@ -1,0 +1,16 @@
+{
+    "type": "record",
+    "name": "card",
+    "fields": [
+        { "name": "cardId", "type": "long" },
+        { "name": "customerId", "type": "long" },
+        { "name": "bank", "type": "string" },
+        { "name": "type", "type": "string" },
+        { "name": "valid_month", "type": "int" },
+        { "name": "valid_year", "type": "int" },
+        { "name": "expiryMonth", "type": "int" },
+        { "name": "expiryYear", "type": "int" },
+        { "name": "cardNum", "type": "string" },
+        { "name": "cardLimit", "type": "float" }
+    ]
+}
